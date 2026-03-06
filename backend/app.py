@@ -10,7 +10,6 @@ from flask import Flask, request, jsonify, session, send_from_directory
 from flask_cors import CORS
 import pandas as pd
 from rapidfuzz import fuzz
-import re
 import string
 
 # ---------------------------------------------------
@@ -31,9 +30,18 @@ DB_PATH = os.path.join(BASE_DIR, "users.db")
 # ---------------------------------------------------
 
 app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path="")
+
 app.secret_key = "hyd_health_secret_2026"
 
-CORS(app, supports_credentials=True)
+# important for cross-domain login (Vercel → Render)
+app.config["SESSION_COOKIE_SAMESITE"] = "None"
+app.config["SESSION_COOKIE_SECURE"] = True
+
+CORS(
+    app,
+    supports_credentials=True,
+    origins=["https://healthcare-platform.vercel.app"]
+)
 
 # ---------------------------------------------------
 # DATABASE
@@ -44,7 +52,9 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def init_db():
+
     conn = get_db()
     c = conn.cursor()
 
@@ -68,6 +78,7 @@ def init_db():
 
     conn.commit()
     conn.close()
+
 
 init_db()
 
@@ -102,8 +113,8 @@ def load_dataset():
 
     return df
 
-df = load_dataset()
 
+df = load_dataset()
 unique_tests = df["test name"].unique()
 
 # ---------------------------------------------------
@@ -123,12 +134,13 @@ def normalize(text):
 
     return text
 
+
 norm_test_map = {normalize(t):t for t in unique_tests}
+
 
 def find_all_matches(query):
 
     results = set()
-
     nq = normalize(query)
 
     for norm,orig in norm_test_map.items():
@@ -145,7 +157,7 @@ def find_all_matches(query):
     return list(results)
 
 # ---------------------------------------------------
-# AUTH
+# AUTH DECORATOR
 # ---------------------------------------------------
 
 def login_required(f):
@@ -220,12 +232,25 @@ def register():
 
     return jsonify({"success":True})
 
+
 @app.route("/logout",methods=["POST"])
 def logout():
 
     session.clear()
 
     return jsonify({"success":True})
+
+
+@app.route("/me",methods=["GET"])
+def me():
+
+    if session.get("user_id"):
+        return jsonify({
+            "role":"user",
+            "username":session.get("username")
+        })
+
+    return jsonify({"role":"guest"}),401
 
 # ---------------------------------------------------
 # SEARCH
@@ -235,7 +260,6 @@ def logout():
 def search():
 
     data=request.get_json()
-
     query=data.get("query","")
 
     matches=find_all_matches(query)
@@ -246,18 +270,15 @@ def search():
     results=[]
 
     matched=df[df["test name"].isin(matches)]
-
     grouped=matched.groupby("company name",as_index=False).first()
 
     for _,row in grouped.iterrows():
 
         results.append({
-
             "company":row["company name"],
             "location":row["location"],
             "price":int(row["price"]),
             "test":row["canonical_name"]
-
         })
 
     return jsonify({"results":results})
@@ -293,6 +314,7 @@ def get_cart():
     cart=[dict(i) for i in items]
 
     return jsonify({"cart":cart})
+
 
 @app.route("/cart/add",methods=["POST"])
 @login_required
