@@ -1,6 +1,6 @@
 # requirements.txt for backend
 # List of Python packages needed for the backend
-Flask
+flask
 flask-cors
 pandas
 rapidfuzz
