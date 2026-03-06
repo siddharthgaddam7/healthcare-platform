@@ -1,4 +1,4 @@
-const BASE = "";
+const BASE = "https://healthcare-backend-iwkt.onrender.com";
 
 /* ─── Helper: HTML-escape ─── */
 function esc(s) {
@@ -105,10 +105,10 @@ function renderTable(testName, labs) {
 async function loadCart() {
     try {
         const r = await fetch(BASE + "/cart", { credentials: "include" });
-        if (!r.ok) return;              // admin or not logged in — skip
+        if (!r.ok) return;
         const d = await r.json();
         renderCartUI(d.cart || [], d.total || 0);
-    } catch (e) { /* ignore */ }
+    } catch (e) {}
 }
 
 function renderCartUI(items, total) {
@@ -182,7 +182,6 @@ window.onload = async function () {
         document.getElementById("navUser").textContent = "Hi, " + d.username;
     } catch (e) { window.location.href = "login.html"; return; }
 
-    // Now safely call — functions are already defined above
     loadTests();
     loadCart();
 
