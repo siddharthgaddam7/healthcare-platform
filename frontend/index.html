@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hyderabad Health — Clinical Portal</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <nav class="topnav">
+        <div class="topnav-left">
+            <span class="nav-icon">&#x2665;</span>
+            <span class="nav-title">Hyderabad Health</span>
+        </div>
+        <div class="topnav-right">
+            <span class="nav-user" id="navUser"></span>
+            <button class="nav-cart-btn" onclick="toggleCart()">
+                &#128722; Cart <span class="cart-count" id="cartCount">0</span>
+            </button>
+            <button class="nav-logout-btn" onclick="doLogout()">Logout</button>
+        </div>
+    </nav>
+    <div class="page-wrap">
+        <header class="site-header">
+            <div class="header-icon">&#x2665;</div>
+            <h1>Healthcare Test Price Transparency</h1>
+            <p>Compare diagnostic test prices across Hyderabad labs</p>
+        </header>
+        <main class="search-card">
+            <label for="testQuery" class="input-label">Enter Test Name</label>
+            <input id="testQuery" type="text" class="text-input" placeholder="e.g. CBC, Thyroid, Blood Sugar"
+                autocomplete="off">
+            <label for="testDropdown" class="input-label" style="margin-top:1rem;">Or Select from List</label>
+            <div class="select-wrap">
+                <select id="testDropdown" class="dropdown">
+                    <option value="">- Select a Test -</option>
+                </select>
+                <span class="select-arrow">&#9662;</span>
+            </div>
+            <button id="searchBtn" class="search-btn">&#128269; Search</button>
+            <div id="results"></div>
+        </main>
+        <footer class="site-footer">&copy; 2026 Hyderabad Healthcare Transparency</footer>
+    </div>
+    <div class="cart-overlay" id="cartOverlay" onclick="toggleCart()"></div>
+    <aside class="cart-sidebar" id="cartSidebar">
+        <div class="cart-header">
+            <h3>&#128722; My Cart</h3>
+            <button class="cart-close-btn" onclick="toggleCart()">&#10005;</button>
+        </div>
+        <div class="cart-body" id="cartBody">
+            <p class="cart-empty">Your cart is empty.</p>
+        </div>
+        <div class="cart-footer" id="cartFooter" style="display:none;">
+            <div class="cart-total-row">
+                <span>Total</span>
+                <span class="cart-total-price" id="cartTotal">&#8377;0</span>
+            </div>
+            <button class="cart-clear-btn" onclick="clearCart()">Clear Cart</button>
+        </div>
+    </aside>
+    <script src="script.js"></script>
+</body>
+
+</html>

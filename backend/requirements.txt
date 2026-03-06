@@ -1,0 +1,6 @@
+# requirements.txt for backend
+# List of Python packages needed for the backend
+Flask
+pandas
+rapidfuzz
+openpyxl  # For reading Excel files

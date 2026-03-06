@@ -1,0 +1,102 @@
+{
+  "CBC": {
+    "short_description": "Complete Blood Count measures the cellular components of blood including red cells, white cells, and platelets. It provides a broad overview of overall health and can detect conditions like anemia, infection, and blood disorders. It is one of the most commonly ordered diagnostic tests.",
+    "why_it_is_done": "To evaluate general health, screen for disorders such as anemia or infection, and monitor treatment response for known conditions.",
+    "parameters_measured": ["Hemoglobin", "Hematocrit", "RBC Count", "WBC Count", "Platelet Count", "MCV", "MCH", "MCHC", "Differential WBC Count"],
+    "normal_range_summary": "Hemoglobin: 12–17 g/dL; WBC: 4,000–11,000 cells/mcL; Platelets: 1.5–4.5 lakh/mcL. Ranges vary by age and sex.",
+    "fasting_required": "No",
+    "sample_type": "Whole Blood (EDTA)",
+    "report_time": "Same day, typically within 4–6 hours",
+    "preparation_instructions": "No fasting needed. Avoid strenuous exercise immediately before the test. Inform the lab about any medications being taken."
+  },
+  "Haemoglobin": {
+    "short_description": "Haemoglobin is the iron-containing protein in red blood cells responsible for carrying oxygen throughout the body. A haemoglobin test measures its concentration in the blood to assess oxygen-carrying capacity. Low levels indicate anemia; elevated levels may suggest dehydration or polycythemia.",
+    "why_it_is_done": "To diagnose anemia, monitor iron deficiency, evaluate fatigue or breathlessness, and assess blood health during pregnancy or chronic illness.",
+    "parameters_measured": ["Haemoglobin (Hb) concentration"],
+    "normal_range_summary": "Men: 13.5–17.5 g/dL; Women: 12.0–15.5 g/dL; Children: varies by age. Values below normal indicate anemia.",
+    "fasting_required": "No",
+    "sample_type": "Whole Blood (EDTA)",
+    "report_time": "Same day, typically within 2–4 hours",
+    "preparation_instructions": "No special preparation required. Stay well hydrated. Mention any iron supplements or recent blood transfusions to the lab."
+  },
+  "Lipid Profile": {
+    "short_description": "A lipid profile measures the levels of fats and fatty substances in the blood, including cholesterol and triglycerides. It is a key tool for assessing cardiovascular risk and metabolic health. Abnormal values are associated with increased risk of heart disease and stroke.",
+    "why_it_is_done": "To evaluate risk of cardiovascular disease, monitor response to cholesterol-lowering therapy, and screen individuals with family history of heart conditions.",
+    "parameters_measured": ["Total Cholesterol", "LDL Cholesterol", "HDL Cholesterol", "Triglycerides", "VLDL", "Non-HDL Cholesterol"],
+    "normal_range_summary": "Total Cholesterol: below 200 mg/dL; LDL: below 100 mg/dL (optimal); HDL: above 40 mg/dL (men), above 50 mg/dL (women); Triglycerides: below 150 mg/dL.",
+    "fasting_required": "Yes",
+    "sample_type": "Serum",
+    "report_time": "Same day, typically within 4–6 hours",
+    "preparation_instructions": "Fast for 9–12 hours before the test. Water is permitted. Avoid alcohol for 24 hours prior. Take regular medications as prescribed unless advised otherwise by your doctor."
+  },
+  "Thyroid Panel": {
+    "short_description": "A thyroid panel assesses the functioning of the thyroid gland by measuring hormone levels in the blood. It typically includes TSH, T3, and T4, which regulate metabolism, energy, and several body functions. Both overactive and underactive thyroid conditions are diagnosed using this panel.",
+    "why_it_is_done": "To diagnose hypothyroidism or hyperthyroidism, monitor thyroid hormone replacement therapy, and evaluate symptoms like unexplained weight changes, fatigue, or palpitations.",
+    "parameters_measured": ["TSH (Thyroid Stimulating Hormone)", "Free T3 (Triiodothyronine)", "Free T4 (Thyroxine)"],
+    "normal_range_summary": "TSH: 0.4–4.0 mIU/L; Free T4: 0.8–1.8 ng/dL; Free T3: 2.3–4.2 pg/mL. Ranges may differ slightly across laboratories.",
+    "fasting_required": "No",
+    "sample_type": "Serum",
+    "report_time": "Same day to next day, typically within 6–12 hours",
+    "preparation_instructions": "No fasting required. If on thyroid medication (e.g. levothyroxine), consult your doctor about whether to take the dose before or after the test. Preferably collect the sample in the morning."
+  },
+  "Liver Function Test": {
+    "short_description": "Liver Function Tests (LFT) are a group of blood tests that measure enzymes, proteins, and substances produced or processed by the liver. They help detect liver inflammation, damage, or disease. This panel provides a comprehensive picture of liver health.",
+    "why_it_is_done": "To screen for liver disease, monitor patients on medications that affect the liver, and investigate symptoms like jaundice, abdominal pain, or fatigue.",
+    "parameters_measured": ["SGOT (AST)", "SGPT (ALT)", "Alkaline Phosphatase (ALP)", "Total Bilirubin", "Direct Bilirubin", "Indirect Bilirubin", "Total Protein", "Albumin", "Globulin", "A/G Ratio"],
+    "normal_range_summary": "SGPT: 7–56 U/L; SGOT: 10–40 U/L; ALP: 44–147 U/L; Total Bilirubin: 0.1–1.2 mg/dL; Albumin: 3.4–5.4 g/dL. Values vary by lab.",
+    "fasting_required": "Yes",
+    "sample_type": "Serum",
+    "report_time": "Same day, typically within 4–8 hours",
+    "preparation_instructions": "Fasting for 8–10 hours is recommended for accurate results. Avoid alcohol for at least 48 hours prior. Inform the lab about all medications and supplements being taken."
+  },
+  "Uric Acid": {
+    "short_description": "Uric acid is a waste product formed from the breakdown of purines found in certain foods and body cells. Elevated uric acid in the blood can lead to gout, kidney stones, and joint inflammation. This test measures serum uric acid concentration.",
+    "why_it_is_done": "To diagnose and monitor gout, assess the risk of kidney stones, and evaluate patients on chemotherapy or diuretics that may raise uric acid levels.",
+    "parameters_measured": ["Serum Uric Acid"],
+    "normal_range_summary": "Men: 3.4–7.0 mg/dL; Women: 2.4–6.0 mg/dL. Values above normal ranges may indicate hyperuricemia.",
+    "fasting_required": "Depends",
+    "sample_type": "Serum",
+    "report_time": "Same day, typically within 4–6 hours",
+    "preparation_instructions": "Fasting for 4–8 hours is preferred for more accurate results. Avoid high-purine foods (red meat, seafood, alcohol) 24 hours before the test. Stay well hydrated."
+  },
+  "Post Prandial Glucose": {
+    "short_description": "Post Prandial Glucose (PPG), also called post-meal blood sugar, measures blood glucose levels 2 hours after a meal. It reflects how effectively the body processes sugar after eating. Elevated post-meal glucose is an early indicator of diabetes or impaired glucose tolerance.",
+    "why_it_is_done": "To diagnose diabetes or pre-diabetes, monitor blood sugar control in known diabetics, and evaluate effectiveness of diabetes medication or dietary changes.",
+    "parameters_measured": ["Blood Glucose (2 hours post meal)"],
+    "normal_range_summary": "Normal: below 140 mg/dL; Pre-diabetic: 140–199 mg/dL; Diabetic: 200 mg/dL or above (2 hours after eating).",
+    "fasting_required": "Depends",
+    "sample_type": "Serum or Whole Blood",
+    "report_time": "Same day, typically within 2–4 hours",
+    "preparation_instructions": "Have a standard meal (not skipped, not excessively large) and visit the lab exactly 2 hours after starting the meal. Do not eat or drink anything other than water during the 2-hour wait. Continue regular diabetes medications unless your doctor instructs otherwise."
+  },
+  "Dengue": {
+    "short_description": "Dengue tests detect evidence of dengue virus infection, a mosquito-borne illness common in tropical regions including Hyderabad. Depending on the stage of illness, different markers are tested. NS1 antigen is detectable in early infection, while IgM and IgG antibodies appear later.",
+    "why_it_is_done": "To confirm dengue infection in patients presenting with fever, body ache, rash, or low platelet count, and to determine the stage of infection.",
+    "parameters_measured": ["NS1 Antigen", "IgM Antibody", "IgG Antibody"],
+    "normal_range_summary": "All results should be negative in the absence of infection. A positive NS1 indicates active early infection; positive IgM indicates recent infection; positive IgG may indicate past exposure.",
+    "fasting_required": "No",
+    "sample_type": "Serum",
+    "report_time": "Same day, typically within 4–6 hours",
+    "preparation_instructions": "No fasting or special preparation required. Test is most informative when done within the first 5 days of fever onset (for NS1) or after day 5 (for IgM/IgG). Inform the lab about the day of fever onset."
+  },
+  "Insulin": {
+    "short_description": "The fasting insulin test measures the level of insulin in the blood after an overnight fast. Insulin is the hormone produced by the pancreas that regulates blood sugar. This test helps evaluate insulin resistance, pancreatic function, and causes of hypoglycemia.",
+    "why_it_is_done": "To assess insulin resistance in patients with obesity, PCOS, or pre-diabetes, investigate hypoglycemia episodes, and evaluate pancreatic beta-cell function.",
+    "parameters_measured": ["Serum Fasting Insulin"],
+    "normal_range_summary": "Fasting insulin: 2–25 mIU/L (typical reference range). Values above 25 mIU/L may suggest insulin resistance. Ranges can vary by laboratory method.",
+    "fasting_required": "Yes",
+    "sample_type": "Serum",
+    "report_time": "Same day to next day, typically within 6–12 hours",
+    "preparation_instructions": "Fast for a minimum of 8 hours before the test. Water is permitted. Avoid insulin injections or diabetes medications before the sample is drawn unless specifically advised by your doctor."
+  },
+  "ECG": {
+    "short_description": "An Electrocardiogram (ECG) records the electrical activity of the heart over time using electrodes placed on the skin. It provides information about heart rate, rhythm, and the presence of any cardiac abnormalities. It is a non-invasive, painless procedure done in minutes.",
+    "why_it_is_done": "To diagnose arrhythmias, detect signs of a heart attack, evaluate chest pain or palpitations, and screen for cardiac conditions before surgery or during routine health checks.",
+    "parameters_measured": ["Heart Rate", "Heart Rhythm", "P Wave", "QRS Complex", "ST Segment", "T Wave", "PR Interval", "QT Interval"],
+    "normal_range_summary": "Normal sinus rhythm: 60–100 bpm; Normal PR interval: 120–200 ms; Normal QRS: less than 120 ms. Deviations indicate specific cardiac conditions.",
+    "fasting_required": "No",
+    "sample_type": "Non-invasive (surface electrodes)",
+    "report_time": "Immediate to same day; report typically within 1–2 hours",
+    "preparation_instructions": "No fasting required. Wear loose, comfortable clothing for easy electrode placement. Avoid applying lotions or oils on the chest area on the day of the test. Remain calm and still during the procedure."
+  }
+}
