@@ -17,11 +17,12 @@ import string
 # ---------------------------------------------------
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
 
-FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
+FRONTEND_DIR = os.path.join(BASE_DIR, "..", "frontend")
 
-DATA_PATH = os.path.join(PROJECT_ROOT, "enriched_with_canonical (1).xlsx")
+# DATASET IS IN backend/ FOLDER
+DATA_PATH = os.path.join(BASE_DIR, "enriched_with_canonical (1).xlsx")
+
 METADATA_PATH = os.path.join(BASE_DIR, "test_metadata.json")
 DB_PATH = os.path.join(BASE_DIR, "users.db")
 
@@ -33,15 +34,13 @@ app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path="")
 
 app.secret_key = "hyd_health_secret_2026"
 
-# session cookies must work across domains
 app.config["SESSION_COOKIE_SAMESITE"] = "None"
 app.config["SESSION_COOKIE_SECURE"] = True
 
-# CORS FIX (important)
 CORS(
     app,
     supports_credentials=True,
-    resources={r"/*": {"origins": "*"}},
+    resources={r"/*": {"origins": "*"}}
 )
 
 # ---------------------------------------------------
