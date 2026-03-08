@@ -36,8 +36,6 @@ app.secret_key = "hyd_health_secret_2026"
 app.config["SESSION_COOKIE_SAMESITE"] = "None"
 app.config["SESSION_COOKIE_SECURE"] = True
 
-# ✅ FIX 1: CORS now points to your exact Vercel URL instead of wildcard *
-# Wildcard * + credentials:include = browser blocks it. This fixes that.
 CORS(
     app,
     supports_credentials=True,
@@ -63,6 +61,7 @@ def init_db():
     conn = get_db()
     c = conn.cursor()
 
+    # Create users table if not exists
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,6 +71,15 @@ def init_db():
         )
     """)
 
+    # ✅ KEY FIX: old users.db doesn't have 'role' column
+    # This safely adds it without breaking existing data
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'")
+        conn.commit()
+    except:
+        pass  # column already exists, ignore
+
+    # Create cart table if not exists
     c.execute("""
         CREATE TABLE IF NOT EXISTS cart (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -189,10 +197,10 @@ def login():
     conn.close()
 
     if user:
-        session["user_id"] = user["id"]
+        session["user_id"]  = user["id"]
         session["username"] = user["username"]
-        session["role"] = user["role"]
-        return jsonify({"success": True, "role": user["role"]})
+        session["role"]     = user["role"] if user["role"] else "user"
+        return jsonify({"success": True, "role": session["role"]})
 
     return jsonify({"error": "invalid credentials"}), 401
 
@@ -228,14 +236,13 @@ def logout():
 def me():
     if session.get("user_id"):
         return jsonify({
-            "role": session.get("role", "user"),
+            "role":     session.get("role", "user"),
             "username": session.get("username")
         })
     return jsonify({"role": "guest"}), 401
 
 # ---------------------------------------------------
 # SEARCH
-# ✅ FIX 2: Response now matches what frontend renderResult() expects
 # ---------------------------------------------------
 
 @app.route("/search", methods=["POST"])
@@ -258,34 +265,31 @@ def search():
         labs = []
         for _, row in subset.iterrows():
             labs.append({
-                "company": str(row["company name"]),
+                "company":  str(row["company name"]),
                 "location": str(row["location"]) if pd.notna(row["location"]) else "Hyderabad",
-                "price": int(row["price"])
+                "price":    int(row["price"])
             })
 
         if not labs:
             continue
 
-        prices = [l["price"] for l in labs]
-        min_p = min(prices)
-        max_p = max(prices)
-        avg_p = round(sum(prices) / len(prices))
+        prices      = [l["price"] for l in labs]
+        min_p       = min(prices)
+        max_p       = max(prices)
+        avg_p       = round(sum(prices) / len(prices))
         min_company = labs[prices.index(min_p)]["company"]
         max_company = labs[prices.index(max_p)]["company"]
 
-        # Get canonical name for this test
         canonical = subset.iloc[0]["canonical_name"]
-
-        # Get metadata if available
-        info = metadata.get(canonical, metadata.get(match, {}))
+        info      = metadata.get(canonical, metadata.get(match, {}))
 
         results.append({
             "matched_test": canonical,
-            "info": info,
+            "info":         info,
             "statistics": {
-                "min_price": min_p,
-                "max_price": max_p,
-                "avg_price": avg_p,
+                "min_price":   min_p,
+                "max_price":   max_p,
+                "avg_price":   avg_p,
                 "min_company": min_company,
                 "max_company": max_company
             },
@@ -305,22 +309,19 @@ def tests():
 
 # ---------------------------------------------------
 # CART
-# ✅ FIX 3: Added total to GET /cart
-# ✅ FIX 4: Added missing /cart/remove route
-# ✅ FIX 5: Added missing /cart/clear route
 # ---------------------------------------------------
 
 @app.route("/cart", methods=["GET"])
 @login_required
 def get_cart():
-    conn = get_db()
+    conn  = get_db()
     items = conn.execute(
         "SELECT * FROM cart WHERE user_id=?",
         (session["user_id"],)
     ).fetchall()
     conn.close()
 
-    cart = [dict(i) for i in items]
+    cart  = [dict(i) for i in items]
     total = sum(i["price"] for i in cart)
 
     return jsonify({"cart": cart, "total": total})
