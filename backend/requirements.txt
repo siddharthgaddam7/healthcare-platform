@@ -5,5 +5,4 @@ flask-cors
 pandas
 rapidfuzz
 openpyxl  # For reading Excel files
-
-
+pymongo[srv]  # For MongoDB connection
