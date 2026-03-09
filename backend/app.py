@@ -1,7 +1,8 @@
 """
 Healthcare Test Price Transparency Backend
 """
-
+from pymongo import MongoClient
+import os
 import json
 import os
 import sqlite3
@@ -11,6 +12,12 @@ from flask_cors import CORS
 import pandas as pd
 from rapidfuzz import fuzz
 import string
+
+MONGO_URL = os.environ.get("MONGO_URL")
+
+client = MongoClient(MONGO_URL)
+
+db = client["healthcare_platform"]
 
 # ---------------------------------------------------
 # PATH SETUP
@@ -241,6 +248,16 @@ def me():
         })
     return jsonify({"role": "guest"}), 401
 
+@app.route("/tests")
+def tests():
+
+    tests=df["canonical_name"].unique().tolist()
+
+    return jsonify({"tests":tests})
+@app.route("/mongo-test")
+def mongo_test():
+    db.test.insert_one({"status": "connected"})
+    return "MongoDB working"
 # ---------------------------------------------------
 # SEARCH
 # ---------------------------------------------------
