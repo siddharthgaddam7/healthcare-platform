@@ -47,7 +47,7 @@ import bcrypt
 mongo_db = None
 try:
     from pymongo import MongoClient
-    MONGO_URI = os.environ.get("MONGO_URI") or os.environ.get("MONGO_URL")
+    MONGO_URI = (os.environ.get("MONGO_URI") or os.environ.get("MONGO_URL") or "").strip()
     if MONGO_URI:
         _client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
         _client.admin.command("ping")
