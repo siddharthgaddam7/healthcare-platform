@@ -6,3 +6,4 @@ rapidfuzz
 openpyxl
 pymongo[srv]
 bcrypt
+sendgrid

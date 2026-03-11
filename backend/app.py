@@ -43,68 +43,56 @@ from rapidfuzz import fuzz
 
 # ─── bcrypt for password hashing (Task 10) ───────────────────────────────────
 import bcrypt
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 # ─── Email config ────────────────────────────────────────────────────────────
 GMAIL_USER         = os.environ.get("GMAIL_USER", "").strip()
-GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "").strip().replace(" ", "")
+SENDGRID_API_KEY   = os.environ.get("SENDGRID_API_KEY", "").strip()
 EMAIL_TEST_MODE    = os.environ.get("EMAIL_TEST_MODE", "true").strip().lower() == "true"
 
 def send_booking_email(to_email, test_name, lab_name, patient_name, patient_email, patient_phone, booking_id):
-    """Send booking request email via Gmail SMTP."""
-    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
-        print("[WARN] Gmail credentials not set — email not sent")
+    """Sends a booking request email using SendGrid's HTTP API."""
+    if not SENDGRID_API_KEY:
+        print("[WARN] SENDGRID_API_KEY not set. Email cannot be sent.")
         return False
 
-    # In test mode, redirect ALL emails to GMAIL_USER
-    actual_to = GMAIL_USER if EMAIL_TEST_MODE else to_email
-    mode_label = " [TEST MODE]" if EMAIL_TEST_MODE else ""
-
-    msg = MIMEMultipart()
-    msg["From"]    = GMAIL_USER
-    msg["To"]      = actual_to
-    msg["Subject"] = f"New Booking Request — {test_name} at {lab_name}{mode_label}"
-
-    body = f"""Hello {lab_name},
-
-A patient has requested to book a diagnostic test through Hyderabad Health.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  BOOKING DETAILS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Reference ID : {booking_id}
-  Test         : {test_name}
-  Lab          : {lab_name}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  PATIENT INFO
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Name  : {patient_name}
-  Email : {patient_email or 'Not provided'}
-  Phone : {patient_phone or 'Not provided'}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Please confirm the appointment at your earliest convenience.
-
-Best regards,
-Hyderabad Health Platform
-https://healthcare-backend-iwkt.onrender.com
-"""
+    recipient = GMAIL_USER if EMAIL_TEST_MODE else to_email
+    subject = f"New Booking Request — {test_name} at {lab_name}"
     if EMAIL_TEST_MODE:
-        body = f"[TEST MODE — Original recipient: {to_email}]\n\n" + body
+        subject = f"[TEST MODE] {subject}"
 
-    msg.attach(MIMEText(body, "plain"))
+    html_body = f"""
+    <h2>New Laboratory Booking Request</h2>
+    <hr>
+    <p><strong>Reference ID:</strong> {booking_id}</p>
+    <p><strong>Test Name:</strong> {test_name}</p>
+    <p><strong>Lab Name:</strong> {lab_name}</p>
+    <hr>
+    <h3>Patient Information:</h3>
+    <p><strong>Name:</strong> {patient_name}</p>
+    <p><strong>Email:</strong> {patient_email or 'Not provided'}</p>
+    <p><strong>Phone:</strong> {patient_phone or 'Not provided'}</p>
+    <br>
+    <p>Please review this request and contact the patient to confirm the appointment.</p>
+    """
+    if EMAIL_TEST_MODE:
+        html_body = f"<p><strong>[TEST MODE — Original recipient: {to_email}]</strong></p>" + html_body
+
+    message = Mail(
+        from_email=GMAIL_USER,
+        to_emails=recipient,
+        subject=subject,
+        html_content=html_body
+    )
 
     try:
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.starttls()
-            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-            server.sendmail(GMAIL_USER, actual_to, msg.as_string())
-        print(f"[OK] Booking email sent to {actual_to}")
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+        print(f"[OK] Email sent via SendGrid to {recipient}. Status: {response.status_code}")
         return True
     except Exception as e:
-        print(f"[ERROR] Email failed: {e}")
+        print(f"[ERROR] SendGrid failed: {e}")
         return False
 
 # ─── MongoDB ─────────────────────────────────────────────────────────────────
@@ -238,27 +226,26 @@ def mongo_test():
 
 @app.route("/test-email")
 def test_email():
-    """Debug endpoint to test SMTP from Render."""
+    """Debug endpoint to test SendGrid HTTP API from Render."""
     import traceback
     info = {
         "gmail_user": GMAIL_USER,
-        "app_password_set": bool(GMAIL_APP_PASSWORD),
-        "app_password_len": len(GMAIL_APP_PASSWORD),
+        "sendgrid_key_set": bool(SENDGRID_API_KEY),
+        "sendgrid_key_len": len(SENDGRID_API_KEY) if SENDGRID_API_KEY else 0,
         "test_mode": EMAIL_TEST_MODE,
     }
     try:
-        msg = MIMEMultipart()
-        msg["From"]    = GMAIL_USER
-        msg["To"]      = GMAIL_USER
-        msg["Subject"] = "Render SMTP Test"
-        msg.attach(MIMEText("If you see this, SMTP works from Render!", "plain"))
-
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as server:
-            server.starttls()
-            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-            server.sendmail(GMAIL_USER, GMAIL_USER, msg.as_string())
+        message = Mail(
+            from_email=GMAIL_USER,
+            to_emails=GMAIL_USER,
+            subject="Healthcare Platform: SendGrid Debug Test",
+            html_content="<strong>If you see this, SendGrid HTTP API works from Render!</strong>"
+        )
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
         info["status"] = "SUCCESS"
-        info["message"] = "Email sent! Check your inbox."
+        info["http_status"] = response.status_code
+        info["message"] = "Email sent via SendGrid! Check your inbox."
     except Exception as e:
         info["status"] = "FAILED"
         info["error"] = str(e)
