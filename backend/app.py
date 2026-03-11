@@ -210,42 +210,46 @@ def login():
 
 @app.route("/register", methods=["POST"])
 def register():
-    data     = request.get_json()
-    username = data.get("username", "").strip()
-    password = data.get("password", "").strip()
-    email    = data.get("email", "").strip()
-    phone    = data.get("phone", "").strip()
-    security_question = data.get("security_question", "").strip()
-    security_answer   = data.get("security_answer", "").strip().lower()
+    try:
+        data     = request.get_json()
+        username = data.get("username", "").strip()
+        password = data.get("password", "").strip()
+        email    = data.get("email", "").strip()
+        phone    = data.get("phone", "").strip()
+        security_question = data.get("security_question", "").strip()
+        security_answer   = data.get("security_answer", "").strip().lower()
 
-    if not username or not password:
-        return jsonify({"error": "Username and password required"}), 400
-    if len(password) < 4:
-        return jsonify({"error": "Password must be at least 4 characters"}), 400
+        if not username or not password:
+            return jsonify({"error": "Username and password required"}), 400
+        if len(password) < 4:
+            return jsonify({"error": "Password must be at least 4 characters"}), 400
 
-    if mongo_db is not None:
-        # Check if username is taken
-        if mongo_db.users.find_one({"username": username}):
-            return jsonify({"error": "Username already taken"}), 409
+        if mongo_db is not None:
+            # Check if username is taken
+            if mongo_db.users.find_one({"username": username}):
+                return jsonify({"error": "Username already taken"}), 409
 
-        user_doc = {
-            "username":          username,
-            "password":          hash_password(password),
-            "role":              "user",
-            "email":             email,
-            "phone":             phone,
-            "security_question": security_question,
-            "security_answer":   hash_password(security_answer) if security_answer else "",
-            "mfa_enabled":       False,
-            "created_at":        datetime.utcnow(),
-        }
-        result = mongo_db.users.insert_one(user_doc)
-        session["user_id"]  = str(result.inserted_id)
-        session["username"] = username
-        session["role"]     = "user"
-        return jsonify({"success": True, "role": "user"})
-    else:
-        return jsonify({"error": "Database not available"}), 500
+            user_doc = {
+                "username":          username,
+                "password":          hash_password(password),
+                "role":              "user",
+                "email":             email,
+                "phone":             phone,
+                "security_question": security_question,
+                "security_answer":   hash_password(security_answer) if security_answer else "",
+                "mfa_enabled":       False,
+                "created_at":        datetime.utcnow(),
+            }
+            result = mongo_db.users.insert_one(user_doc)
+            session["user_id"]  = str(result.inserted_id)
+            session["username"] = username
+            session["role"]     = "user"
+            return jsonify({"success": True, "role": "user"})
+        else:
+            return jsonify({"error": "Database not available"}), 500
+    except Exception as e:
+        print(f"[ERROR] Register failed: {e}")
+        return jsonify({"error": f"Registration error: {str(e)}"}), 500
 
 
 @app.route("/logout", methods=["POST"])
