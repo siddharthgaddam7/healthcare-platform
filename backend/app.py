@@ -236,6 +236,35 @@ def mongo_test():
         return jsonify({"connected": False, "error": str(e)}), 500
 
 
+@app.route("/test-email")
+def test_email():
+    """Debug endpoint to test SMTP from Render."""
+    import traceback
+    info = {
+        "gmail_user": GMAIL_USER,
+        "app_password_set": bool(GMAIL_APP_PASSWORD),
+        "app_password_len": len(GMAIL_APP_PASSWORD),
+        "test_mode": EMAIL_TEST_MODE,
+    }
+    try:
+        msg = MIMEMultipart()
+        msg["From"]    = GMAIL_USER
+        msg["To"]      = GMAIL_USER
+        msg["Subject"] = "Render SMTP Test"
+        msg.attach(MIMEText("If you see this, SMTP works from Render!", "plain"))
+
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as server:
+            server.starttls()
+            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+            server.sendmail(GMAIL_USER, GMAIL_USER, msg.as_string())
+        info["status"] = "SUCCESS"
+        info["message"] = "Email sent! Check your inbox."
+    except Exception as e:
+        info["status"] = "FAILED"
+        info["error"] = str(e)
+        info["traceback"] = traceback.format_exc()
+    return jsonify(info)
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  AUTH ROUTES  (MongoDB-first, bcrypt passwords)
 # ═══════════════════════════════════════════════════════════════════════════════
