@@ -49,7 +49,7 @@ from email.mime.multipart import MIMEMultipart
 
 # ─── Email config ────────────────────────────────────────────────────────────
 GMAIL_USER         = os.environ.get("GMAIL_USER", "").strip()
-GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "").strip()
+GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "").strip().replace(" ", "")
 EMAIL_TEST_MODE    = os.environ.get("EMAIL_TEST_MODE", "true").strip().lower() == "true"
 
 def send_booking_email(to_email, test_name, lab_name, patient_name, patient_email, patient_phone, booking_id):
