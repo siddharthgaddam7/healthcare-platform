@@ -20,7 +20,7 @@ from pymongo import MongoClient
 
 # ─── Config ──────────────────────────────────────────────────────────────────
 BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH     = os.path.join(BASE_DIR, "enriched_with_canonical (1).xlsx")
+DATA_PATH     = os.path.join(BASE_DIR, "enriched_with_canonical_updated.xlsx")
 METADATA_PATH = os.path.join(BASE_DIR, "test_metadata.json")
 
 MONGO_URI = os.environ.get("MONGO_URI")
@@ -126,11 +126,11 @@ for _, row in df.iterrows():
         "test_name":      row["test name"],
         "canonical_name": row["canonical_name"],
         "price":          int(row["price"]),
-        # Placeholder contact fields (Task 2 — to be filled later)
-        "phone":   "",
-        "email":   "",
-        "website": "",
-        "address": "",
+        # Task 2 — real contact fields from updated dataset
+        "phone":   str(row.get("phone", "")).strip() if pd.notna(row.get("phone")) else "",
+        "email":   str(row.get("email", "")).strip() if pd.notna(row.get("email")) else "",
+        "website": str(row.get("website", "")).strip() if pd.notna(row.get("website")) else "",
+        "address": str(row.get("address", "")).strip() if pd.notna(row.get("address")) else "",
     })
 
 result = db.labs.insert_many(lab_docs)

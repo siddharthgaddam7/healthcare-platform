@@ -203,13 +203,26 @@ function renderResult(r) {
     return html;
 }
 
-/* ─── Lab table with booking button (Task 4) ──────────────────────────── */
+/* ─── Lab table with booking + contact buttons (Task 2 + 4) ───────────── */
 function renderTable(testName, labs) {
     const minP = Math.min(...labs.map(l => l.price));
     const rows = labs.map(l => {
         const best = l.price === minP;
+        // Contact buttons (Task 2)
+        let contactHtml = '';
+        if (l.phone || l.email || l.website || l.address) {
+            contactHtml = '<div class="lab-contacts">';
+            if (l.phone) contactHtml += `<a href="tel:${esc(l.phone)}" class="contact-btn phone-btn" title="${esc(l.phone)}">&#128222; ${esc(l.phone)}</a>`;
+            if (l.email) contactHtml += `<a href="mailto:${esc(l.email)}" class="contact-btn email-btn" title="${esc(l.email)}">&#128231; Email</a>`;
+            if (l.website) contactHtml += `<a href="https://${esc(l.website)}" target="_blank" class="contact-btn web-btn" title="${esc(l.website)}">&#127760; Website</a>`;
+            if (l.address) contactHtml += `<span class="contact-btn addr-btn" title="${esc(l.address)}">&#128205; ${esc(l.address)}</span>`;
+            contactHtml += '</div>';
+        }
         return `<tr class="${best ? "best-row" : ""}">
-            <td>${esc(l.company)}${best ? '<span class="best-badge">Best Value</span>' : ""}</td>
+            <td>
+                ${esc(l.company)}${best ? '<span class="best-badge">Best Value</span>' : ""}
+                ${contactHtml}
+            </td>
             <td>${esc(l.location || "Hyderabad")}</td>
             <td>&#8377;${l.price}</td>
             <td class="action-cell">

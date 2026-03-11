@@ -897,6 +897,59 @@ h3 {
     border-top: 1px solid var(--border);
 }
 
+/* ---------- Lab Contact Buttons (Task 2) ---------- */
+.lab-contacts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.4rem;
+}
+
+.contact-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    transition: all 0.15s;
+    white-space: nowrap;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.contact-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: #f0f7ff;
+}
+
+.phone-btn:hover {
+    border-color: #2d8a4e;
+    color: #2d8a4e;
+}
+
+.email-btn:hover {
+    border-color: #d97706;
+    color: #d97706;
+}
+
+.web-btn:hover {
+    border-color: #3a6ea5;
+    color: #3a6ea5;
+}
+
+.addr-btn {
+    cursor: default;
+    max-width: 280px;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 600px) {
     .stats-card {

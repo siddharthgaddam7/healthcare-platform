@@ -67,7 +67,7 @@ norm_test_map = {}
 
 BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR  = os.path.join(BASE_DIR, "..", "frontend")
-DATA_PATH     = os.path.join(BASE_DIR, "enriched_with_canonical (1).xlsx")
+DATA_PATH     = os.path.join(BASE_DIR, "enriched_with_canonical_updated.xlsx")
 METADATA_PATH = os.path.join(BASE_DIR, "test_metadata.json")
 
 if mongo_db is None:
