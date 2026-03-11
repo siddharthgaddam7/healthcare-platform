@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,6 +14,8 @@
             --accent: #3a6ea5;
             --border: #e5e5e5;
             --radius: 6px;
+            --error: #d22f27;
+            --success: #2d8a4e;
             --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
@@ -31,7 +34,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            min-height: 100vh;
             -webkit-font-smoothing: antialiased;
         }
 
@@ -40,7 +43,7 @@
             border: 1px solid var(--border);
             border-radius: var(--radius);
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             padding: 3rem 2.5rem;
             text-align: center;
         }
@@ -80,6 +83,7 @@
             color: var(--text-secondary);
             cursor: pointer;
             border-bottom: 2px solid transparent;
+            transition: color 0.2s, border-color 0.2s;
         }
 
         .tab-btn.active {
@@ -102,7 +106,8 @@
             margin-bottom: 0.4rem;
         }
 
-        input {
+        input,
+        select {
             width: 100%;
             padding: 0.7rem;
             border: 1px solid var(--border);
@@ -110,9 +115,11 @@
             font-family: inherit;
             font-size: 0.95rem;
             outline: none;
+            transition: border-color 0.2s;
         }
 
-        input:focus {
+        input:focus,
+        select:focus {
             border-color: var(--accent);
         }
 
@@ -128,14 +135,28 @@
             border-radius: var(--radius);
             cursor: pointer;
             margin-top: 1rem;
+            transition: opacity 0.2s;
         }
 
         .submit-btn:hover {
             opacity: 0.9;
         }
 
+        .forgot-link {
+            display: block;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: var(--accent);
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .forgot-link:hover {
+            text-decoration: underline;
+        }
+
         .msg {
-            margin-top: 1.5rem;
+            margin-top: 1.25rem;
             font-size: 0.85rem;
             padding: 0.75rem;
             border-radius: 4px;
@@ -156,8 +177,38 @@
             display: block;
         }
 
-        #registerPanel {
+        .panel {
             display: none;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+        }
+
+        .step {
+            display: none;
+        }
+
+        .step.active {
+            display: block;
+        }
+
+        .optional-note {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
         }
     </style>
 </head>
@@ -168,53 +219,254 @@
             <span class="logo-icon">&#x2665;</span>
             <h1>Hyderabad Health</h1>
         </div>
-        <div class="tabs">
+
+        <!-- TABS -->
+        <div class="tabs" id="mainTabs">
             <button class="tab-btn active" id="loginTab" onclick="showTab('login')">Login</button>
             <button class="tab-btn" id="registerTab" onclick="showTab('register')">Register</button>
         </div>
-        <div id="loginPanel">
+
+        <!-- ═══ LOGIN PANEL ═══ -->
+        <div id="loginPanel" class="panel active">
             <div class="form-group"><label>Username</label><input type="text" id="loginUser"></div>
             <div class="form-group"><label>Password</label><input type="password" id="loginPass"></div>
             <button class="submit-btn" onclick="doLogin()">Sign In</button>
+            <a class="forgot-link" onclick="showTab('forgot')">Forgot Password?</a>
             <div class="msg" id="loginMsg"></div>
         </div>
-        <div id="registerPanel">
+
+        <!-- ═══ REGISTER PANEL ═══ -->
+        <div id="registerPanel" class="panel">
             <div class="form-group"><label>Username</label><input type="text" id="regUser"></div>
             <div class="form-group"><label>Password</label><input type="password" id="regPass"></div>
-            <div class="form-group"><label>Confirm</label><input type="password" id="regPass2"></div>
+            <div class="form-group"><label>Confirm Password</label><input type="password" id="regPass2"></div>
+            <div class="form-group">
+                <label>Email <span style="text-transform:none;font-weight:400">(optional)</span></label>
+                <input type="email" id="regEmail" placeholder="your@email.com">
+            </div>
+            <div class="form-group">
+                <label>Phone <span style="text-transform:none;font-weight:400">(optional)</span></label>
+                <input type="tel" id="regPhone" placeholder="9876543210">
+            </div>
+            <div class="form-group">
+                <label>Security Question</label>
+                <select id="regSecQ">
+                    <option value="">Select a question...</option>
+                    <option value="What is your pet's name?">What is your pet's name?</option>
+                    <option value="What city were you born in?">What city were you born in?</option>
+                    <option value="What is your mother's maiden name?">What is your mother's maiden name?</option>
+                    <option value="What was the name of your first school?">What was the name of your first school?
+                    </option>
+                    <option value="What is your favorite food?">What is your favorite food?</option>
+                </select>
+                <div class="optional-note">Used for password recovery</div>
+            </div>
+            <div class="form-group">
+                <label>Security Answer</label>
+                <input type="text" id="regSecA" placeholder="Your answer">
+            </div>
             <button class="submit-btn" onclick="doRegister()">Create Account</button>
             <div class="msg" id="registerMsg"></div>
         </div>
-    </div>
-    <script>
-        const BASE = '';
-        function showTab(tab) {
-            document.getElementById('loginPanel').style.display = tab === 'login' ? 'block' : 'none';
-            document.getElementById('registerPanel').style.display = tab === 'register' ? 'block' : 'none';
-            document.getElementById('loginTab').classList.toggle('active', tab === 'login');
-            document.getElementById('registerTab').classList.toggle('active', tab === 'register');
-        }
-        function showMsg(id, t, type) { const el = document.getElementById(id); el.textContent = t; el.className = 'msg ' + type; }
 
+        <!-- ═══ FORGOT PASSWORD PANEL ═══ -->
+        <div id="forgotPanel" class="panel">
+            <span class="back-link" onclick="showTab('login')">&#8592; Back to Login</span>
+
+            <!-- Step 1: Enter username -->
+            <div class="step active" id="forgotStep1">
+                <h3 style="font-size:1rem;margin-bottom:1rem;text-align:left;">Reset Password</h3>
+                <div class="form-group"><label>Username</label><input type="text" id="forgotUser"></div>
+                <button class="submit-btn" onclick="forgotStep1()">Continue</button>
+            </div>
+
+            <!-- Step 2: Answer security question -->
+            <div class="step" id="forgotStep2">
+                <h3 style="font-size:1rem;margin-bottom:0.5rem;text-align:left;">Security Question</h3>
+                <p id="securityQ"
+                    style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:1rem;text-align:left;"></p>
+                <div class="form-group"><label>Your Answer</label><input type="text" id="forgotAnswer"></div>
+                <button class="submit-btn" onclick="forgotStep2()">Verify</button>
+            </div>
+
+            <!-- Step 3: Set new password -->
+            <div class="step" id="forgotStep3">
+                <h3 style="font-size:1rem;margin-bottom:1rem;text-align:left;">New Password</h3>
+                <div class="form-group"><label>New Password</label><input type="password" id="newPass"></div>
+                <div class="form-group"><label>Confirm Password</label><input type="password" id="newPass2"></div>
+                <button class="submit-btn" onclick="forgotStep3()">Reset Password</button>
+            </div>
+
+            <div class="msg" id="forgotMsg"></div>
+        </div>
+    </div>
+
+    <script>
+        const BASE = 'https://healthcare-backend-iwkt.onrender.com';
+
+        // ─── Tab switching ─────────────────────────────────────────────
+        function showTab(tab) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+
+            if (tab === 'login') {
+                document.getElementById('loginPanel').classList.add('active');
+                document.getElementById('loginTab').classList.add('active');
+                document.getElementById('mainTabs').style.display = 'flex';
+            } else if (tab === 'register') {
+                document.getElementById('registerPanel').classList.add('active');
+                document.getElementById('registerTab').classList.add('active');
+                document.getElementById('mainTabs').style.display = 'flex';
+            } else if (tab === 'forgot') {
+                document.getElementById('forgotPanel').classList.add('active');
+                document.getElementById('mainTabs').style.display = 'none';
+                // Reset steps
+                document.querySelectorAll('#forgotPanel .step').forEach(s => s.classList.remove('active'));
+                document.getElementById('forgotStep1').classList.add('active');
+                document.getElementById('forgotMsg').className = 'msg';
+            }
+        }
+
+        function showMsg(id, t, type) {
+            const el = document.getElementById(id);
+            el.textContent = t;
+            el.className = 'msg ' + type;
+        }
+
+        // ─── Login ─────────────────────────────────────────────────────
         async function doLogin() {
-            const u = document.getElementById('loginUser').value, p = document.getElementById('loginPass').value;
+            const u = document.getElementById('loginUser').value.trim();
+            const p = document.getElementById('loginPass').value.trim();
+            if (!u || !p) { showMsg('loginMsg', 'Please enter username and password', 'error'); return; }
+
             try {
-                const r = await fetch(BASE + '/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ username: u, password: p }) });
+                const r = await fetch(BASE + '/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ username: u, password: p })
+                });
                 const d = await r.json();
                 if (!r.ok) { showMsg('loginMsg', d.error || 'Login failed', 'error'); return; }
-                window.location.href = d.role === 'admin' ? 'admin.html' : 'index.html';
+
+                if (d.mfa_required) {
+                    // MFA required — redirect to MFA verification
+                    showMsg('loginMsg', 'MFA verification required...', 'success');
+                    // For now, simple prompt for security answer
+                    const answer = prompt('Multi-Factor Authentication\nPlease enter your security answer:');
+                    if (answer) {
+                        const mr = await fetch(BASE + '/mfa/verify', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ security_answer: answer })
+                        });
+                        const md = await mr.json();
+                        if (!mr.ok) { showMsg('loginMsg', md.error || 'MFA failed', 'error'); return; }
+                    } else { return; }
+                }
+
+                if (d.role === 'admin') window.location.href = 'admin.html';
+                else if (d.role === 'doctor') window.location.href = 'doctor.html';
+                else window.location.href = 'index.html';
             } catch (e) { showMsg('loginMsg', 'Server error', 'error'); }
         }
 
+        // ─── Register ──────────────────────────────────────────────────
         async function doRegister() {
-            const u = document.getElementById('regUser').value, p = document.getElementById('regPass').value, c = document.getElementById('regPass2').value;
-            if (p !== c) { showMsg('registerMsg', 'Passwords mismatch', 'error'); return; }
+            const u = document.getElementById('regUser').value.trim();
+            const p = document.getElementById('regPass').value.trim();
+            const c = document.getElementById('regPass2').value.trim();
+            const em = document.getElementById('regEmail').value.trim();
+            const ph = document.getElementById('regPhone').value.trim();
+            const sq = document.getElementById('regSecQ').value;
+            const sa = document.getElementById('regSecA').value.trim();
+
+            if (!u || !p) { showMsg('registerMsg', 'Username and password required', 'error'); return; }
+            if (p !== c) { showMsg('registerMsg', 'Passwords do not match', 'error'); return; }
+            if (p.length < 4) { showMsg('registerMsg', 'Password must be at least 4 characters', 'error'); return; }
+
             try {
-                const r = await fetch(BASE + '/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ username: u, password: p }) });
+                const r = await fetch(BASE + '/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        username: u, password: p,
+                        email: em, phone: ph,
+                        security_question: sq, security_answer: sa
+                    })
+                });
                 const d = await r.json();
-                if (!r.ok) { showMsg('registerMsg', d.error || 'Failed', 'error'); return; }
+                if (!r.ok) { showMsg('registerMsg', d.error || 'Registration failed', 'error'); return; }
                 window.location.href = 'index.html';
             } catch (e) { showMsg('registerMsg', 'Server error', 'error'); }
+        }
+
+        // ─── Forgot Password ───────────────────────────────────────────
+        let resetUsername = '';
+        let resetToken = '';
+
+        async function forgotStep1() {
+            const u = document.getElementById('forgotUser').value.trim();
+            if (!u) { showMsg('forgotMsg', 'Enter your username', 'error'); return; }
+
+            try {
+                const r = await fetch(BASE + '/forgot-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u })
+                });
+                const d = await r.json();
+                if (!r.ok) { showMsg('forgotMsg', d.error || 'User not found', 'error'); return; }
+
+                resetUsername = u;
+                document.getElementById('securityQ').textContent = d.security_question;
+                document.querySelectorAll('#forgotPanel .step').forEach(s => s.classList.remove('active'));
+                document.getElementById('forgotStep2').classList.add('active');
+                document.getElementById('forgotMsg').className = 'msg';
+            } catch (e) { showMsg('forgotMsg', 'Server error', 'error'); }
+        }
+
+        async function forgotStep2() {
+            const answer = document.getElementById('forgotAnswer').value.trim();
+            if (!answer) { showMsg('forgotMsg', 'Enter your answer', 'error'); return; }
+
+            try {
+                const r = await fetch(BASE + '/verify-reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: resetUsername, security_answer: answer })
+                });
+                const d = await r.json();
+                if (!r.ok) { showMsg('forgotMsg', d.error || 'Incorrect answer', 'error'); return; }
+
+                resetToken = d.reset_token;
+                document.querySelectorAll('#forgotPanel .step').forEach(s => s.classList.remove('active'));
+                document.getElementById('forgotStep3').classList.add('active');
+                document.getElementById('forgotMsg').className = 'msg';
+            } catch (e) { showMsg('forgotMsg', 'Server error', 'error'); }
+        }
+
+        async function forgotStep3() {
+            const p1 = document.getElementById('newPass').value.trim();
+            const p2 = document.getElementById('newPass2').value.trim();
+            if (!p1 || !p2) { showMsg('forgotMsg', 'Enter new password', 'error'); return; }
+            if (p1 !== p2) { showMsg('forgotMsg', 'Passwords do not match', 'error'); return; }
+            if (p1.length < 4) { showMsg('forgotMsg', 'Password must be at least 4 characters', 'error'); return; }
+
+            try {
+                const r = await fetch(BASE + '/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: resetUsername, reset_token: resetToken, new_password: p1 })
+                });
+                const d = await r.json();
+                if (!r.ok) { showMsg('forgotMsg', d.error || 'Reset failed', 'error'); return; }
+
+                showMsg('forgotMsg', 'Password reset successful! Redirecting to login...', 'success');
+                setTimeout(() => showTab('login'), 2000);
+            } catch (e) { showMsg('forgotMsg', 'Server error', 'error'); }
         }
     </script>
 </body>

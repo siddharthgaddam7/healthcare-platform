@@ -16,22 +16,31 @@
         </div>
         <div class="topnav-right">
             <span class="nav-user" id="navUser"></span>
+            <button class="nav-cart-btn" onclick="toggleBookings()">
+                &#128203; Bookings <span class="cart-count" id="bookingsCount">0</span>
+            </button>
             <button class="nav-cart-btn" onclick="toggleCart()">
                 &#128722; Cart <span class="cart-count" id="cartCount">0</span>
             </button>
             <button class="nav-logout-btn" onclick="doLogout()">Logout</button>
         </div>
     </nav>
+
     <div class="page-wrap">
         <header class="site-header">
             <div class="header-icon">&#x2665;</div>
             <h1>Healthcare Test Price Transparency</h1>
             <p>Compare diagnostic test prices across Hyderabad labs</p>
         </header>
+
         <main class="search-card">
             <label for="testQuery" class="input-label">Enter Test Name</label>
-            <input id="testQuery" type="text" class="text-input" placeholder="e.g. CBC, Thyroid, Blood Sugar"
-                autocomplete="off">
+            <div class="suggest-container">
+                <input id="testQuery" type="text" class="text-input" placeholder="e.g. CBC, Thyroid, Blood Sugar"
+                    autocomplete="off">
+                <div class="suggest-box" id="suggestBox"></div>
+            </div>
+
             <label for="testDropdown" class="input-label" style="margin-top:1rem;">Or Select from List</label>
             <div class="select-wrap">
                 <select id="testDropdown" class="dropdown">
@@ -42,8 +51,11 @@
             <button id="searchBtn" class="search-btn">&#128269; Search</button>
             <div id="results"></div>
         </main>
+
         <footer class="site-footer">&copy; 2026 Hyderabad Healthcare Transparency</footer>
     </div>
+
+    <!-- Cart Overlay & Sidebar -->
     <div class="cart-overlay" id="cartOverlay" onclick="toggleCart()"></div>
     <aside class="cart-sidebar" id="cartSidebar">
         <div class="cart-header">
@@ -61,6 +73,70 @@
             <button class="cart-clear-btn" onclick="clearCart()">Clear Cart</button>
         </div>
     </aside>
+
+    <!-- Bookings Overlay & Sidebar -->
+    <div class="cart-overlay" id="bookingsOverlay" onclick="toggleBookings()"></div>
+    <aside class="cart-sidebar" id="bookingsSidebar">
+        <div class="cart-header">
+            <h3>&#128203; My Bookings</h3>
+            <button class="cart-close-btn" onclick="toggleBookings()">&#10005;</button>
+        </div>
+        <div class="cart-body" id="bookingsList">
+            <p class="cart-empty">No bookings yet.</p>
+        </div>
+    </aside>
+
+    <!-- Booking Modal -->
+    <div class="modal-overlay" id="bookingOverlay" onclick="closeBookingModal()"></div>
+    <div class="modal" id="bookingModal">
+        <div class="modal-header">
+            <h3>Book Test</h3>
+            <button class="modal-close" onclick="closeBookingModal()">&#10005;</button>
+        </div>
+        <div class="modal-body">
+            <div id="bookingForm">
+                <div class="booking-details">
+                    <div class="booking-detail-row">
+                        <span class="booking-detail-label">Test:</span>
+                        <span id="bookingTestName" class="booking-detail-value"></span>
+                    </div>
+                    <div class="booking-detail-row">
+                        <span class="booking-detail-label">Lab:</span>
+                        <span id="bookingLabName" class="booking-detail-value"></span>
+                    </div>
+                    <div class="booking-detail-row">
+                        <span class="booking-detail-label">Price:</span>
+                        <span id="bookingPrice" class="booking-detail-value"></span>
+                    </div>
+                </div>
+                <input type="hidden" id="bookTestInput">
+                <input type="hidden" id="bookLabInput">
+
+                <div class="booking-modes">
+                    <label class="booking-mode-option">
+                        <input type="radio" name="bookMode" value="direct_contact" checked>
+                        <div class="mode-card">
+                            <div class="mode-icon">&#128222;</div>
+                            <div class="mode-title">Direct Contact</div>
+                            <div class="mode-desc">Get lab phone number and contact them directly</div>
+                        </div>
+                    </label>
+                    <label class="booking-mode-option">
+                        <input type="radio" name="bookMode" value="email_request">
+                        <div class="mode-card">
+                            <div class="mode-icon">&#9993;</div>
+                            <div class="mode-title">Email Request</div>
+                            <div class="mode-desc">Send booking request to lab via email</div>
+                        </div>
+                    </label>
+                </div>
+
+                <button class="submit-booking-btn" onclick="submitBooking()">Confirm Booking</button>
+            </div>
+            <div id="bookingResult" style="display:none;"></div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 

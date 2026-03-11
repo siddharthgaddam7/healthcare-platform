@@ -1,8 +1,8 @@
 # requirements.txt for backend
-# List of Python packages needed for the backend
 flask
 flask-cors
 pandas
 rapidfuzz
-openpyxl  # For reading Excel files
-pymongo[srv]  # For MongoDB connection
+openpyxl
+pymongo[srv]
+bcrypt

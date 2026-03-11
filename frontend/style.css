@@ -1,7 +1,6 @@
 /* ==========================================================
    Healthcare Test Price Transparency — Clinical Premium
    Minimal · Professional · Medically Authoritative
-   Style Rules: No gradients, no flashy shadows, SF Pro/Inter style
    ========================================================== */
 
 /* ---------- Design Tokens ---------- */
@@ -9,17 +8,13 @@
     --bg-base: #ffffff;
     --bg-secondary: #f5f6f7;
     --text-primary: #1c1c1e;
-    /* Deep charcoal */
     --text-secondary: #6e6e73;
-    /* Soft grey */
     --accent: #3a6ea5;
-    /* Muted hospital blue */
     --border: #e5e5e5;
     --border-hover: #d2d2d7;
     --error: #d22f27;
     --success: #2d8a4e;
     --radius: 6px;
-    /* Strict Apple-style subtle radius */
     --max-width: 800px;
     --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
@@ -42,7 +37,6 @@ body {
     overflow-x: hidden;
 }
 
-/* ---------- Typography ---------- */
 h1,
 h2,
 h3 {
@@ -51,7 +45,7 @@ h3 {
     color: var(--text-primary);
 }
 
-/* ---------- Layout Components ---------- */
+/* ---------- Layout ---------- */
 .page-wrap {
     max-width: var(--max-width);
     margin: 0 auto;
@@ -90,7 +84,8 @@ h3 {
 .topnav-right {
     display: flex;
     align-items: center;
-    gap: 1.25rem;
+    gap: 1rem;
+    flex-wrap: wrap;
 }
 
 .nav-user {
@@ -141,7 +136,29 @@ h3 {
     text-decoration: underline;
 }
 
-/* ---------- Panel & Cards ---------- */
+/* ---------- Header ---------- */
+.site-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.header-icon {
+    color: var(--accent);
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.site-header h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.site-header p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+/* ---------- Search Card ---------- */
 .search-card {
     background: var(--bg-base);
     border: 1px solid var(--border);
@@ -179,6 +196,20 @@ h3 {
     border-color: var(--accent);
 }
 
+.select-wrap {
+    position: relative;
+}
+
+.select-arrow {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
 .search-btn {
     width: 100%;
     margin-top: 1.5rem;
@@ -197,7 +228,44 @@ h3 {
     opacity: 0.9;
 }
 
-/* ---------- Results & Data Panels ---------- */
+/* ---------- Autosuggest (Task 8) ---------- */
+.suggest-container {
+    position: relative;
+}
+
+.suggest-box {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    z-index: 50;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.suggest-item {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f5f5f5;
+    transition: background 0.15s;
+}
+
+.suggest-item:hover {
+    background: var(--bg-secondary);
+}
+
+.suggest-item:last-child {
+    border-bottom: none;
+}
+
+/* ---------- Results ---------- */
 #results {
     margin-top: 2rem;
 }
@@ -243,33 +311,8 @@ h3 {
     font-weight: 600;
 }
 
-.params-section {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border);
-}
-
-.params-label {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    margin-bottom: 0.5rem;
-}
-
-.params-badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
-
-.param-badge {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border);
-    padding: 0.2rem 0.6rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
+.info-grid .full-width {
+    grid-column: 1 / -1;
 }
 
 .prep-box {
@@ -282,7 +325,7 @@ h3 {
     margin-top: 1rem;
 }
 
-/* ---------- Statistics (Clinical Data Panel) ---------- */
+/* ---------- Statistics ---------- */
 .stats-card {
     display: flex;
     justify-content: space-between;
@@ -315,7 +358,75 @@ h3 {
     color: var(--text-secondary);
 }
 
-/* ---------- Research Data Table ---------- */
+.save-banner {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+    color: #166534;
+    margin-bottom: 1rem;
+}
+
+/* ---------- Price Chart (Task 9) ---------- */
+.price-chart-wrap {
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.price-chart-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+}
+
+.price-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.price-bar-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    width: 100px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.price-bar-track {
+    flex: 1;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    height: 24px;
+    overflow: hidden;
+}
+
+.price-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    font-size: 0.7rem;
+    color: #fff;
+    font-weight: 600;
+    transition: width 0.5s ease;
+}
+
+.price-bar-fill.best {
+    background: var(--success);
+}
+
+/* ---------- Lab Table ---------- */
 .lab-table-wrap {
     background: var(--bg-base);
     border: 1px solid var(--border);
@@ -363,6 +474,12 @@ h3 {
     font-weight: 600;
 }
 
+.action-cell {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+}
+
 .add-cart-btn {
     background: var(--bg-base);
     border: 1px solid var(--border);
@@ -383,6 +500,21 @@ h3 {
     border-color: var(--border);
     color: var(--text-secondary);
     cursor: default;
+}
+
+.book-btn {
+    background: var(--accent);
+    border: none;
+    color: #fff;
+    padding: 0.3rem 0.7rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.book-btn:hover {
+    opacity: 0.9;
 }
 
 /* ---------- Cart Sidebar ---------- */
@@ -443,16 +575,25 @@ h3 {
     overflow-y: auto;
 }
 
+.cart-empty {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 2rem 0;
+}
+
 .cart-item {
-    padding-bottom: 1rem;
-    margin-bottom: 1rem;
+    padding: 0.75rem 0;
     border-bottom: 1px solid #f1f1f1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .cart-item-test {
     font-weight: 600;
     font-size: 0.9rem;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.15rem;
 }
 
 .cart-item-lab {
@@ -463,7 +604,19 @@ h3 {
 .cart-item-price {
     font-weight: 600;
     font-size: 0.9rem;
-    float: right;
+}
+
+.cart-remove-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 0.2rem;
+}
+
+.cart-remove-btn:hover {
+    color: var(--error);
 }
 
 .cart-footer {
@@ -489,6 +642,261 @@ h3 {
     cursor: pointer;
 }
 
+/* ---------- Bookings (Task 4) ---------- */
+.booking-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f1f1f1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.booking-item-test {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.booking-item-lab {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.booking-item-date {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin-top: 0.15rem;
+}
+
+.booking-status-badge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.booking-status-badge.confirmed {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.booking-status-badge.pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.booking-status-badge.cancelled {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.booking-cancel-btn {
+    background: none;
+    border: 1px solid var(--border);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    margin-left: 0.5rem;
+}
+
+.booking-cancel-btn:hover {
+    border-color: var(--error);
+    color: var(--error);
+}
+
+.booking-item-actions {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* ---------- Booking Modal ---------- */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 300;
+}
+
+.modal-overlay.open {
+    display: block;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--bg-base);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    width: 90%;
+    max-width: 460px;
+    z-index: 301;
+}
+
+.modal.open {
+    display: block;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.booking-details {
+    background: var(--bg-secondary);
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.booking-detail-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.4rem;
+}
+
+.booking-detail-row:last-child {
+    margin-bottom: 0;
+}
+
+.booking-detail-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.booking-detail-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.booking-modes {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.booking-mode-option {
+    flex: 1;
+    cursor: pointer;
+}
+
+.booking-mode-option input[type="radio"] {
+    display: none;
+}
+
+.mode-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    text-align: center;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.booking-mode-option input:checked+.mode-card {
+    border-color: var(--accent);
+    background: #f0f7ff;
+}
+
+.mode-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.4rem;
+}
+
+.mode-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+}
+
+.mode-desc {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+
+.submit-booking-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.submit-booking-btn:hover {
+    opacity: 0.9;
+}
+
+.booking-success {
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.booking-success-icon {
+    font-size: 2.5rem;
+    color: var(--success);
+    width: 60px;
+    height: 60px;
+    line-height: 60px;
+    border-radius: 50%;
+    background: #f0fdf4;
+    margin: 0 auto 1rem;
+    border: 2px solid #dcfce7;
+}
+
+.booking-success h3 {
+    margin-bottom: 0.5rem;
+}
+
+.booking-success p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.4rem;
+}
+
+.booking-note {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.75rem;
+}
+
+/* ---------- Footer ---------- */
+.site-footer {
+    text-align: center;
+    padding: 2rem 0;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    border-top: 1px solid var(--border);
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 600px) {
     .stats-card {
@@ -498,5 +906,23 @@ h3 {
 
     .info-grid {
         grid-template-columns: 1fr;
+    }
+
+    .booking-modes {
+        flex-direction: column;
+    }
+
+    .action-cell {
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    .price-bar-label {
+        width: 70px;
+        font-size: 0.65rem;
+    }
+
+    .topnav-right {
+        gap: 0.5rem;
     }
 }

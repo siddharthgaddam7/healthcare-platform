@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Dashboard — Hyderabad Health</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            background-color: #ffffff;
+        }
+
+        .page {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        .header-section {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 2rem;
+        }
+
+        .header-section h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-section p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .doctor-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .card {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            background: var(--bg-base);
+        }
+
+        .card h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+        }
+
+        .profile-form .form-row {
+            margin-bottom: 1rem;
+        }
+
+        .profile-form label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.3rem;
+        }
+
+        .profile-form input {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 0.9rem;
+            font-family: inherit;
+            outline: none;
+        }
+
+        .profile-form input:focus {
+            border-color: var(--accent);
+        }
+
+        .save-btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: var(--radius);
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .save-btn:hover {
+            opacity: 0.9;
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-box {
+            flex: 1;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .stat-box .num {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .stat-box .lbl {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-top: 0.25rem;
+        }
+
+        .appointments-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .appointments-table th {
+            text-align: left;
+            padding: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .appointments-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #f3f3f3;
+        }
+
+        .review-item {
+            padding: 1rem 0;
+            border-bottom: 1px solid #f3f3f3;
+        }
+
+        .review-item:last-child {
+            border-bottom: none;
+        }
+
+        .review-text {
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .review-author {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 700px) {
+            .doctor-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-row {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="topnav">
+        <div class="topnav-left">
+            <span class="nav-icon">&#x2665;</span>
+            <span class="nav-title">Hyderabad Health</span>
+            <span
+                style="font-size:0.7rem;background:var(--bg-secondary);padding:0.2rem 0.5rem;border-radius:4px;font-weight:600;">DOCTOR</span>
+        </div>
+        <div class="topnav-right">
+            <span class="nav-user" id="navUser"></span>
+            <button class="nav-logout-btn" onclick="doLogout()">Sign Out</button>
+        </div>
+    </nav>
+
+    <div class="page">
+        <div class="header-section">
+            <h1>Doctor Dashboard</h1>
+            <p>Manage your profile, view appointments, and monitor patient reviews.</p>
+        </div>
+
+        <div class="stats-row">
+            <div class="card stat-box">
+                <div class="num" id="statAppointments">0</div>
+                <div class="lbl">Appointments</div>
+            </div>
+            <div class="card stat-box">
+                <div class="num" id="statPatients">0</div>
+                <div class="lbl">Patients</div>
+            </div>
+            <div class="card stat-box">
+                <div class="num" id="statRating">–</div>
+                <div class="lbl">Rating</div>
+            </div>
+        </div>
+
+        <div class="doctor-grid">
+            <!-- Profile Card -->
+            <div class="card">
+                <h3>&#128100; Profile</h3>
+                <form class="profile-form" onsubmit="saveProfile(event)">
+                    <div class="form-row">
+                        <label>Full Name</label>
+                        <input type="text" id="docName" placeholder="Dr. Full Name">
+                    </div>
+                    <div class="form-row">
+                        <label>Specialization</label>
+                        <input type="text" id="docSpec" placeholder="e.g. General Medicine">
+                    </div>
+                    <div class="form-row">
+                        <label>Hospital / Clinic</label>
+                        <input type="text" id="docHospital" placeholder="e.g. Apollo Hospital">
+                    </div>
+                    <button class="save-btn" type="submit">Save Profile</button>
+                    <span id="saveMsg" style="margin-left:0.75rem;font-size:0.8rem;color:var(--success);"></span>
+                </form>
+            </div>
+
+            <!-- Reviews Card -->
+            <div class="card">
+                <h3>&#11088; Reviews</h3>
+                <div id="reviewsList">
+                    <div class="empty-state">No reviews yet</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Appointments -->
+        <div class="card" style="margin-bottom:2rem;">
+            <h3>&#128203; Recent Appointments</h3>
+            <table class="appointments-table">
+                <thead>
+                    <tr>
+                        <th>Patient</th>
+                        <th>Test</th>
+                        <th>Lab</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="appointmentsTbody">
+                    <tr>
+                        <td colspan="5" class="empty-state">No appointments yet</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const B = "https://healthcare-backend-iwkt.onrender.com";
+
+        // Auth check
+        fetch(B + "/me", { credentials: "include" })
+            .then(r => r.json())
+            .then(d => {
+                if (d.role !== "doctor") window.location.href = "login.html";
+                document.getElementById("navUser").textContent = "Dr. " + (d.username || "");
+            })
+            .catch(() => window.location.href = "login.html");
+
+        // Load profile
+        async function loadProfile() {
+            try {
+                const r = await fetch(B + "/doctor/profile", { credentials: "include" });
+                const d = await r.json();
+                if (d.profile) {
+                    document.getElementById("docName").value = d.profile.name || "";
+                    document.getElementById("docSpec").value = d.profile.specialization || "";
+                    document.getElementById("docHospital").value = d.profile.hospital || "";
+                    document.getElementById("statPatients").textContent = d.profile.patients_treated || 0;
+                    document.getElementById("statRating").textContent = d.profile.rating || "–";
+
+                    const reviewsList = document.getElementById("reviewsList");
+                    const reviews = d.profile.reviews || [];
+                    if (reviews.length) {
+                        reviewsList.innerHTML = reviews.map(r => `
+                            <div class="review-item">
+                                <div class="review-text">"${r.text || r}"</div>
+                                <div class="review-author">— ${r.author || "Patient"}</div>
+                            </div>
+                        `).join("");
+                    }
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // Save profile
+        async function saveProfile(e) {
+            e.preventDefault();
+            try {
+                const r = await fetch(B + "/doctor/profile", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        name: document.getElementById("docName").value,
+                        specialization: document.getElementById("docSpec").value,
+                        hospital: document.getElementById("docHospital").value,
+                    })
+                });
+                if (r.ok) {
+                    document.getElementById("saveMsg").textContent = "Saved!";
+                    setTimeout(() => document.getElementById("saveMsg").textContent = "", 2000);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // Load appointments
+        async function loadAppointments() {
+            try {
+                const r = await fetch(B + "/doctor/appointments", { credentials: "include" });
+                const d = await r.json();
+                const list = d.appointments || [];
+                document.getElementById("statAppointments").textContent = list.length;
+
+                const tbody = document.getElementById("appointmentsTbody");
+                if (!list.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No appointments yet</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = list.map(a => `
+                    <tr>
+                        <td style="font-weight:500">${a.username || "–"}</td>
+                        <td>${a.test_name}</td>
+                        <td>${a.lab_name}</td>
+                        <td><span class="booking-status-badge ${a.status}">${a.status}</span></td>
+                        <td>${a.created_at ? new Date(a.created_at).toLocaleDateString() : "–"}</td>
+                    </tr>
+                `).join("");
+            } catch (e) { console.error(e); }
+        }
+
+        function doLogout() {
+            fetch(B + "/logout", { method: "POST", credentials: "include" })
+                .then(() => window.location.href = "login.html");
+        }
+
+        loadProfile();
+        loadAppointments();
+    </script>
+</body>
+
+</html>
