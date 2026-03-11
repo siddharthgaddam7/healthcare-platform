@@ -33,6 +33,7 @@ import json
 import os
 import string
 import random
+import threading
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -803,22 +804,23 @@ def book_test():
         response["lab_phone"] = lab.get("phone", "")
         response["lab_address"] = lab.get("address", "")
 
-    # For email request mode, send email to lab (or test email)
+    # For email request mode, send email in background thread (async)
     if mode == "email_request":
         lab_email = lab.get("email", "") if lab else ""
         user = mongo_db.users.find_one({"_id": __import__('bson').ObjectId(session["user_id"])})
         patient_email = user.get("email", "") if user else ""
         patient_phone = user.get("phone", "") if user else ""
-        email_sent = send_booking_email(
-            to_email      = lab_email,
-            test_name     = test_name,
-            lab_name      = lab_name,
-            patient_name  = session.get("username", "Patient"),
-            patient_email = patient_email,
-            patient_phone = patient_phone,
-            booking_id    = booking_id,
-        )
-        response["email_sent"] = email_sent
+        # Send email in background so response is instant
+        threading.Thread(target=send_booking_email, kwargs={
+            "to_email":      lab_email,
+            "test_name":     test_name,
+            "lab_name":      lab_name,
+            "patient_name":  session.get("username", "Patient"),
+            "patient_email": patient_email,
+            "patient_phone": patient_phone,
+            "booking_id":    booking_id,
+        }, daemon=True).start()
+        response["email_sent"] = True
 
     return jsonify(response)
 

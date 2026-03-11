@@ -365,6 +365,9 @@ function closeBookingModal() {
 }
 
 async function submitBooking() {
+    const btn = document.querySelector('#bookingForm button[onclick="submitBooking()"]');
+    if (btn) { btn.disabled = true; btn.textContent = "Sending..."; }
+
     const mode = document.querySelector('input[name="bookMode"]:checked').value;
     const testName = document.getElementById("bookTestInput").value;
     const labName = document.getElementById("bookLabInput").value;
