@@ -302,7 +302,7 @@
     </div>
 
     <script>
-        const BASE = 'https://healthcare-backend-iwkt.onrender.com';
+        const BASE = window.location.hostname.includes("onrender.com") ? "" : "https://healthcare-backend-iwkt.onrender.com";
 
         // ─── Tab switching ─────────────────────────────────────────────
         function showTab(tab) {

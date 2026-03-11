@@ -274,7 +274,7 @@
     </div>
 
     <script>
-        const B = "https://healthcare-backend-iwkt.onrender.com";
+        const B = window.location.hostname.includes("onrender.com") ? "" : "https://healthcare-backend-iwkt.onrender.com";
 
         // Auth check
         fetch(B + "/me", { credentials: "include" })

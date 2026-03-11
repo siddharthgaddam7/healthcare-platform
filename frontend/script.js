@@ -1,4 +1,8 @@
-const BASE = "https://healthcare-backend-iwkt.onrender.com";
+// Dynamic BASE: empty when served from Render (same origin = cookies work)
+// Full URL when served from Vercel or elsewhere
+const BASE = window.location.hostname.includes("onrender.com")
+    ? ""
+    : "https://healthcare-backend-iwkt.onrender.com";
 
 /* ─── HTML escape ─────────────────────────────────────────────────────── */
 function esc(s) {
