@@ -42,6 +42,69 @@ from rapidfuzz import fuzz
 
 # ─── bcrypt for password hashing (Task 10) ───────────────────────────────────
 import bcrypt
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+# ─── Email config ────────────────────────────────────────────────────────────
+GMAIL_USER         = os.environ.get("GMAIL_USER", "").strip()
+GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "").strip()
+EMAIL_TEST_MODE    = os.environ.get("EMAIL_TEST_MODE", "true").strip().lower() == "true"
+
+def send_booking_email(to_email, test_name, lab_name, patient_name, patient_email, patient_phone, booking_id):
+    """Send booking request email via Gmail SMTP."""
+    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
+        print("[WARN] Gmail credentials not set — email not sent")
+        return False
+
+    # In test mode, redirect ALL emails to GMAIL_USER
+    actual_to = GMAIL_USER if EMAIL_TEST_MODE else to_email
+    mode_label = " [TEST MODE]" if EMAIL_TEST_MODE else ""
+
+    msg = MIMEMultipart()
+    msg["From"]    = GMAIL_USER
+    msg["To"]      = actual_to
+    msg["Subject"] = f"New Booking Request — {test_name} at {lab_name}{mode_label}"
+
+    body = f"""Hello {lab_name},
+
+A patient has requested to book a diagnostic test through Hyderabad Health.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  BOOKING DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Reference ID : {booking_id}
+  Test         : {test_name}
+  Lab          : {lab_name}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PATIENT INFO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Name  : {patient_name}
+  Email : {patient_email or 'Not provided'}
+  Phone : {patient_phone or 'Not provided'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Please confirm the appointment at your earliest convenience.
+
+Best regards,
+Hyderabad Health Platform
+https://healthcare-backend-iwkt.onrender.com
+"""
+    if EMAIL_TEST_MODE:
+        body = f"[TEST MODE — Original recipient: {to_email}]\n\n" + body
+
+    msg.attach(MIMEText(body, "plain"))
+
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+            server.sendmail(GMAIL_USER, actual_to, msg.as_string())
+        print(f"[OK] Booking email sent to {actual_to}")
+        return True
+    except Exception as e:
+        print(f"[ERROR] Email failed: {e}")
+        return False
 
 # ─── MongoDB ─────────────────────────────────────────────────────────────────
 mongo_db = None
@@ -726,18 +789,36 @@ def book_test():
         "created_at": datetime.utcnow(),
     }
     result = mongo_db.bookings.insert_one(booking_doc)
+    booking_id = str(result.inserted_id)
 
     response = {
         "success": True,
-        "booking_id": str(result.inserted_id),
+        "booking_id": booking_id,
         "status": booking_doc["status"],
         "mode": mode,
     }
 
-    # For direct contact mode, return lab phone
+    # For direct contact mode, return lab phone + address
     if mode == "direct_contact" and lab:
         response["lab_phone"] = lab.get("phone", "")
         response["lab_address"] = lab.get("address", "")
+
+    # For email request mode, send email to lab (or test email)
+    if mode == "email_request":
+        lab_email = lab.get("email", "") if lab else ""
+        user = mongo_db.users.find_one({"_id": __import__('bson').ObjectId(session["user_id"])})
+        patient_email = user.get("email", "") if user else ""
+        patient_phone = user.get("phone", "") if user else ""
+        email_sent = send_booking_email(
+            to_email      = lab_email,
+            test_name     = test_name,
+            lab_name      = lab_name,
+            patient_name  = session.get("username", "Patient"),
+            patient_email = patient_email,
+            patient_phone = patient_phone,
+            booking_id    = booking_id,
+        )
+        response["email_sent"] = email_sent
 
     return jsonify(response)
 

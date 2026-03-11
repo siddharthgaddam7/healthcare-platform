@@ -392,12 +392,16 @@ async function submitBooking() {
                     <p class="booking-note">Call the lab directly to book your appointment. Mention your Reference ID.</p>
                 </div>`;
         } else {
+            const emailSent = d.email_sent;
             resultDiv.innerHTML = `
                 <div class="booking-success">
-                    <div class="booking-success-icon">&#128203;</div>
-                    <h3>Booking Saved</h3>
+                    <div class="booking-success-icon">${emailSent ? '&#9993;' : '&#128203;'}</div>
+                    <h3>${emailSent ? 'Booking Email Sent!' : 'Booking Saved'}</h3>
                     <p>Reference ID: <strong>${d.booking_id}</strong></p>
-                    <p class="booking-note">Your booking request has been saved. Visit the lab with your Reference ID or call them to confirm your appointment.</p>
+                    <p class="booking-note">${emailSent
+                    ? 'A booking request email has been sent to the lab. They will review your request and confirm your appointment.'
+                    : 'Your booking request has been saved. Visit the lab with your Reference ID or call them to confirm your appointment.'
+                }</p>
                 </div>`;
         }
         resultDiv.style.display = "block";
