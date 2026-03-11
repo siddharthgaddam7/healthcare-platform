@@ -384,20 +384,20 @@ async function submitBooking() {
         if (mode === "direct_contact") {
             resultDiv.innerHTML = `
                 <div class="booking-success">
-                    <div class="booking-success-icon">&#10003;</div>
-                    <h3>Booking Confirmed!</h3>
-                    <p>Your booking ID: <strong>${d.booking_id}</strong></p>
-                    ${d.lab_phone ? `<p>Lab Phone: <a href="tel:${d.lab_phone}">${d.lab_phone}</a></p>` : ""}
-                    ${d.lab_address ? `<p>Address: ${esc(d.lab_address)}</p>` : ""}
-                    <p class="booking-note">Please contact the lab to schedule your appointment.</p>
+                    <div class="booking-success-icon">&#128222;</div>
+                    <h3>Lab Contact Details</h3>
+                    <p>Reference ID: <strong>${d.booking_id}</strong></p>
+                    ${d.lab_phone ? `<p>📞 Phone: <a href="tel:${d.lab_phone}"><strong>${d.lab_phone}</strong></a></p>` : ""}
+                    ${d.lab_address ? `<p>📍 Address: ${esc(d.lab_address)}</p>` : ""}
+                    <p class="booking-note">Call the lab directly to book your appointment. Mention your Reference ID.</p>
                 </div>`;
         } else {
             resultDiv.innerHTML = `
                 <div class="booking-success">
-                    <div class="booking-success-icon">&#9993;</div>
-                    <h3>Request Sent!</h3>
-                    <p>Booking ID: <strong>${d.booking_id}</strong></p>
-                    <p class="booking-note">The lab will contact you to confirm your appointment.</p>
+                    <div class="booking-success-icon">&#128203;</div>
+                    <h3>Booking Saved</h3>
+                    <p>Reference ID: <strong>${d.booking_id}</strong></p>
+                    <p class="booking-note">Your booking request has been saved. Visit the lab with your Reference ID or call them to confirm your appointment.</p>
                 </div>`;
         }
         resultDiv.style.display = "block";
