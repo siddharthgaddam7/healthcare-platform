@@ -166,7 +166,7 @@ else:
 # ─── Flask app ───────────────────────────────────────────────────────────────
 app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path="")
 app.secret_key = "hyd_health_secret_2026"
-app.config["SESSION_COOKIE_SAMESITE"] = "None"
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"]   = False
 
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": [
