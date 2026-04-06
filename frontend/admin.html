@@ -170,7 +170,7 @@
     </div>
 
     <script>
-        const B = window.location.hostname.includes("onrender.com") ? "" : "https://healthcare-backend-iwkt.onrender.com";
+        const B = "http://15.206.125.164:10000";
         fetch(B + "/me", { credentials: "include" })
             .then(r => r.json())
             .then(d => { if (d.role !== "admin") window.location.href = "login.html"; })
