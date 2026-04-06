@@ -172,7 +172,7 @@ app.config["SESSION_COOKIE_SECURE"]   = False
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": [
     "https://healthcare-platform-gamma.vercel.app",
     "https://healthcare-platform.vercel.app",
-    "http://15.206.125.164:10000",
+    "http://15.206.125.164",
     "http://localhost:3000",
     "http://localhost:5500",
     "http://127.0.0.1:5500",

@@ -1,5 +1,5 @@
 // Backend API base URL (AWS EC2)
-const BASE = "http://15.206.125.164:10000";
+const BASE = "http://15.206.125.164";
 
 /* ─── HTML escape ─────────────────────────────────────────────────────── */
 function esc(s) {
