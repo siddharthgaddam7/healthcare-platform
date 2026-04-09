@@ -7,3 +7,4 @@ openpyxl
 pymongo[srv]
 bcrypt
 sendgrid
+python-dotenv

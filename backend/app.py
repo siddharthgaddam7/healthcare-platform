@@ -29,6 +29,9 @@ Routes:
   POST /mfa/verify      - MFA verify (Task 6)
 """
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import json
 import os
 import string
