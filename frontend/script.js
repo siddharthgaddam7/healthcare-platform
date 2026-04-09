@@ -1,5 +1,7 @@
-// Backend API base URL (AWS EC2)
-const BASE = "http://15.206.125.164";
+// Backend API base URL (auto-detect local vs EC2)
+const BASE = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://localhost:10000"
+    : "http://15.206.125.164";
 
 /* ─── HTML escape ─────────────────────────────────────────────────────── */
 function esc(s) {

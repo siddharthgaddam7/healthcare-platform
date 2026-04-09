@@ -29,8 +29,13 @@ Routes:
   POST /mfa/verify      - MFA verify (Task 6)
 """
 
+import os
 from dotenv import load_dotenv
-load_dotenv()
+
+# Ensure .env is loaded from the same directory as this file
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+env_path = os.path.join(BASE_DIR, ".env")
+load_dotenv(dotenv_path=env_path)
 
 import json
 import os
@@ -47,7 +52,7 @@ from rapidfuzz import fuzz
 # ─── bcrypt for password hashing (Task 10) ───────────────────────────────────
 import bcrypt
 from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
+from sendgrid.helpers.mail import Mail, From, ReplyTo
 
 # ─── Email config ────────────────────────────────────────────────────────────
 GMAIL_USER         = os.environ.get("GMAIL_USER", "").strip()
@@ -82,20 +87,26 @@ def send_booking_email(to_email, test_name, lab_name, patient_name, patient_emai
     if EMAIL_TEST_MODE:
         html_body = f"<p><strong>[TEST MODE — Original recipient: {to_email}]</strong></p>" + html_body
 
+    from_name = "ClinixCompare Portal"
     message = Mail(
-        from_email=GMAIL_USER,
+        from_email=From(GMAIL_USER, from_name),
         to_emails=recipient,
         subject=subject,
         html_content=html_body
     )
+    message.reply_to = ReplyTo(GMAIL_USER, from_name)
 
     try:
         sg = SendGridAPIClient(SENDGRID_API_KEY)
         response = sg.send(message)
-        print(f"[OK] Email sent via SendGrid to {recipient}. Status: {response.status_code}")
+        msg_id = response.headers.get("X-Message-Id")
+        print(f"[OK] Email sent via SendGrid to {recipient}. Status: {response.status_code}, ID: {msg_id}")
         return True
     except Exception as e:
-        print(f"[ERROR] SendGrid failed: {e}")
+        print(f"[ERROR] SendGrid failed. From: {GMAIL_USER}, To: {recipient}")
+        print(f"[ERROR] Error: {e}")
+        if hasattr(e, 'body'):
+            print(f"[ERROR] Response Body: {e.body}")
         return False
 
 # ─── MongoDB ─────────────────────────────────────────────────────────────────
@@ -249,11 +260,50 @@ def test_email():
         response = sg.send(message)
         info["status"] = "SUCCESS"
         info["http_status"] = response.status_code
+        info["message_id"] = response.headers.get("X-Message-Id")
         info["message"] = "Email sent via SendGrid! Check your inbox."
     except Exception as e:
         info["status"] = "FAILED"
         info["error"] = str(e)
         info["traceback"] = traceback.format_exc()
+    return jsonify(info)
+
+
+@app.route("/test-email-custom")
+def test_email_custom():
+    """Diagnostic endpoint to test SendGrid delivery to any email address."""
+    to_email = request.args.get("to", "").strip()
+    if not to_email:
+        return jsonify({"error": "Query param 'to' is required (e.g. /test-email-custom?to=your@email.com)"}), 400
+
+    import traceback
+    info = {
+        "to_email": to_email,
+        "from_email": GMAIL_USER,
+        "sendgrid_key_set": bool(SENDGRID_API_KEY),
+    }
+    try:
+        from_name = "ClinixCompare Diagnostic"
+        message = Mail(
+            from_email=From(GMAIL_USER, from_name),
+            to_emails=to_email,
+            subject=f"Diagnostic Test — {to_email}",
+            html_content=f"<strong>SendGrid Diagnostic Test</strong><p>Sent to: {to_email}</p>"
+        )
+        message.reply_to = ReplyTo(GMAIL_USER, from_name)
+
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+        info["status"] = "SUCCESS"
+        info["http_status"] = response.status_code
+        info["message_id"] = response.headers.get("X-Message-Id")
+    except Exception as e:
+        info["status"] = "FAILED"
+        info["error"] = str(e)
+        if hasattr(e, 'body'):
+            info["error_body"] = str(e.body)
+        info["traceback"] = traceback.format_exc()
+
     return jsonify(info)
 
 # ═══════════════════════════════════════════════════════════════════════════════
