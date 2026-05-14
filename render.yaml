@@ -19,9 +19,9 @@ services:
         sync: false
       - key: SECRET_KEY
         sync: false
-      - key: GMAIL_USER
+      - key: RESEND_API_KEY
         sync: false
-      - key: GMAIL_APP_PASSWORD
+      - key: RESEND_FROM
         sync: false
       - key: BOOKING_EMAIL_TO
         sync: false
