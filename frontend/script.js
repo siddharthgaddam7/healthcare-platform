@@ -400,7 +400,7 @@ async function submitBooking() {
                     <h3>${emailSent ? 'Booking Email Sent!' : 'Booking saved — email issue'}</h3>
                     <p>Reference ID: <strong>${d.booking_id}</strong></p>
                     <p class="booking-note">${emailSent
-                    ? 'A booking request email has been sent to the lab. They will review your request and confirm your appointment.'
+                    ? 'A booking notification email was sent to the operations inbox.'
                     : 'Your booking was saved, but the lab email could not be sent. You can still contact the lab with your Reference ID.'}${emailErr ? `<br><br><span class="msg-error" style="display:inline-block;margin-top:.5rem">${emailErr}</span>` : ''}
                 </p>
                 </div>`;

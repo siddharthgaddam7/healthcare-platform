@@ -1,8 +1,7 @@
 # Render Blueprint — only used if you create/update the service from this file in the Render UI.
-# An existing Web Service ignores this file unless you use "Blueprints" / IaC sync.
-# For a normal Web Service: set Start Command in the dashboard to:
+# For a normal Web Service: set Start Command to:
 #   gunicorn --bind 0.0.0.0:$PORT app:app
-# Or rely on backend/Procfile (Render runs the `web` process from the service root directory).
+# Or use backend/Procfile.
 
 services:
   - type: web
@@ -20,11 +19,11 @@ services:
         sync: false
       - key: SECRET_KEY
         sync: false
-      - key: SENDGRID_API_KEY
-        sync: false
       - key: GMAIL_USER
         sync: false
-      - key: EMAIL_TEST_MODE
+      - key: GMAIL_APP_PASSWORD
         sync: false
-      - key: BOOKING_EMAIL_BCC
+      - key: BOOKING_EMAIL_TO
+        sync: false
+      - key: EMAIL_TEST_MODE
         sync: false

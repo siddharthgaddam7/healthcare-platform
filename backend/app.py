@@ -44,6 +44,7 @@ import random
 import logging
 from datetime import datetime, timedelta
 from functools import wraps
+from typing import List, Tuple
 
 from flask import Flask, request, jsonify, session, send_from_directory
 from flask_cors import CORS
@@ -51,21 +52,22 @@ from rapidfuzz import fuzz
 
 # ─── bcrypt for password hashing (Task 10) ───────────────────────────────────
 import bcrypt
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, From, ReplyTo, Bcc
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
-# ─── Email config ────────────────────────────────────────────────────────────
-GMAIL_USER       = os.environ.get("GMAIL_USER", "").strip()
-SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "").strip()
-# On Render, default to production (mail goes to lab + optional BCC). Locally, default test mode.
+# ─── Email config (Gmail SMTP + App Password) ───────────────────────────────
+GMAIL_USER          = os.environ.get("GMAIL_USER", "").strip()
+GMAIL_APP_PASSWORD  = os.environ.get("GMAIL_APP_PASSWORD", "").strip()
+# All booking notifications go here (override via env for other deployments).
+BOOKING_EMAIL_TO    = os.environ.get("BOOKING_EMAIL_TO", "siddharthgaddam34@gmail.com").strip()
+
 _is_render = os.environ.get("RENDER", "").strip().lower() in ("true", "1", "yes")
 _raw_test = os.environ.get("EMAIL_TEST_MODE", "").strip()
 if _raw_test:
     EMAIL_TEST_MODE = _raw_test.lower() in ("true", "1", "yes")
 else:
     EMAIL_TEST_MODE = not _is_render
-
-BOOKING_EMAIL_BCC = os.environ.get("BOOKING_EMAIL_BCC", "").strip()
 
 _email_log = logging.getLogger("healthcare.email")
 if not _email_log.handlers:
@@ -84,6 +86,58 @@ def _redact_addr(addr: str) -> str:
     return f"{local[:2]}***@{domain}"
 
 
+def send_html_email_smtp(to_addrs: List[str], subject: str, html_body: str, log_label: str) -> Tuple[bool, str]:
+    """
+    Send HTML mail via Gmail SMTP (TLS on port 465).
+    Returns (success, client_safe_error_message).
+    """
+    to_addrs = [a.strip() for a in to_addrs if a and "@" in a.strip()]
+    if not to_addrs:
+        _email_log.error("%s: no valid recipient addresses", log_label)
+        return False, "No recipient address configured."
+
+    if not GMAIL_USER or "@" not in GMAIL_USER:
+        _email_log.error("%s: GMAIL_USER missing or invalid", log_label)
+        return False, "Email sender is not configured (GMAIL_USER)."
+
+    if not GMAIL_APP_PASSWORD:
+        _email_log.error("%s: GMAIL_APP_PASSWORD not set", log_label)
+        return False, "Email is not configured (GMAIL_APP_PASSWORD)."
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"Hyderabad Health <{GMAIL_USER}>"
+    msg["To"] = ", ".join(to_addrs)
+    msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+    _email_log.info(
+        "%s: SMTP smtp.gmail.com:465 login user=%s recipients=%s",
+        log_label,
+        _redact_addr(GMAIL_USER),
+        [_redact_addr(a) for a in to_addrs],
+    )
+
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=45) as server:
+            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+            _email_log.info("%s: SMTP authentication successful", log_label)
+            server.sendmail(GMAIL_USER, to_addrs, msg.as_string())
+        _email_log.info("%s: SMTP send finished OK", log_label)
+        return True, ""
+    except smtplib.SMTPAuthenticationError as e:
+        _email_log.error("%s: SMTP authentication failed: %s", log_label, e, exc_info=True)
+        return False, "Email login failed (check GMAIL_USER and App Password)."
+    except smtplib.SMTPException as e:
+        _email_log.error("%s: SMTP error: %s", log_label, e, exc_info=True)
+        return False, "Email could not be sent (SMTP error). Check server logs."
+    except OSError as e:
+        _email_log.error("%s: SMTP network/timeout error: %s", log_label, e, exc_info=True)
+        return False, "Email could not be sent (network). Check server logs."
+    except Exception as e:
+        _email_log.error("%s: unexpected error: %s", log_label, e, exc_info=True)
+        return False, "Email could not be sent. Check server logs."
+
+
 def send_booking_email(
     to_email: str,
     test_name: str,
@@ -94,42 +148,11 @@ def send_booking_email(
     booking_id: str,
 ):
     """
-    Send booking notification via SendGrid.
+    Send booking notification via Gmail SMTP to BOOKING_EMAIL_TO only.
+    ``to_email`` (lab address from DB) is included in the body for reference only.
     Returns (success: bool, error_message_for_client: str).
     """
-    to_email = (to_email or "").strip()
-    lab_intended = to_email
-
-    if not SENDGRID_API_KEY:
-        _email_log.error("SENDGRID_API_KEY is not set; cannot send booking email booking_id=%s", booking_id)
-        return False, "Email service is not configured (missing API key)."
-
-    if not GMAIL_USER or "@" not in GMAIL_USER:
-        _email_log.error(
-            "GMAIL_USER is missing or invalid (must be a SendGrid verified sender email) booking_id=%s",
-            booking_id,
-        )
-        return False, "Email sender is not configured (GMAIL_USER)."
-
-    recipient = (GMAIL_USER if EMAIL_TEST_MODE else to_email).strip()
-    if not recipient:
-        _email_log.error(
-            "No recipient resolved (test_mode=%s lab_to=%s) booking_id=%s",
-            EMAIL_TEST_MODE,
-            _redact_addr(lab_intended),
-            booking_id,
-        )
-        return False, "No recipient address for this booking email."
-
-    if not EMAIL_TEST_MODE and not to_email:
-        _email_log.warning(
-            "Lab has no email in DB for lab=%s test=%s booking_id=%s — set BOOKING_EMAIL_BCC or fix lab data, or use EMAIL_TEST_MODE=true for testing.",
-            lab_name,
-            test_name,
-            booking_id,
-        )
-        return False, "This lab has no email on file; the message was not sent."
-
+    lab_record_email = (to_email or "").strip()
     subject = f"New Booking Request — {test_name} at {lab_name}"
     if EMAIL_TEST_MODE:
         subject = f"[TEST MODE] {subject}"
@@ -140,76 +163,32 @@ def send_booking_email(
     <p><strong>Reference ID:</strong> {booking_id}</p>
     <p><strong>Test Name:</strong> {test_name}</p>
     <p><strong>Lab Name:</strong> {lab_name}</p>
+    <p><strong>Lab email (from record, informational):</strong> {lab_record_email or "—"}</p>
     <hr>
     <h3>Patient Information:</h3>
     <p><strong>Name:</strong> {patient_name}</p>
     <p><strong>Email:</strong> {patient_email or 'Not provided'}</p>
     <p><strong>Phone:</strong> {patient_phone or 'Not provided'}</p>
     <br>
-    <p>Please review this request and contact the patient to confirm the appointment.</p>
+    <p>This message was sent to the configured operations inbox (not directly to the lab).</p>
     """
-    if EMAIL_TEST_MODE:
-        html_body = (
-            f"<p><strong>[TEST MODE — intended lab recipient: {_redact_addr(lab_intended)}]</strong></p>" + html_body
-        )
 
-    from_name = "ClinixCompare Portal"
-    message = Mail(
-        from_email=From(GMAIL_USER, from_name),
-        to_emails=recipient,
+    return send_html_email_smtp(
+        to_addrs=[BOOKING_EMAIL_TO],
         subject=subject,
-        html_content=html_body,
-    )
-    message.reply_to = ReplyTo(GMAIL_USER, from_name)
-
-    bcc_addrs = [x.strip() for x in BOOKING_EMAIL_BCC.split(",") if x.strip()]
-    for b in bcc_addrs:
-        try:
-            message.add_bcc(Bcc(b))
-        except Exception as ex:
-            _email_log.warning("Could not add BCC %s: %s", _redact_addr(b), ex)
-
-    _email_log.info(
-        "SendGrid booking email attempt booking_id=%s test_mode=%s to=%s bcc_count=%s subject=%s",
-        booking_id,
-        EMAIL_TEST_MODE,
-        _redact_addr(recipient),
-        len(bcc_addrs),
-        subject[:80],
+        html_body=html_body,
+        log_label=f"booking_id={booking_id}",
     )
 
-    try:
-        sg = SendGridAPIClient(SENDGRID_API_KEY)
-        response = sg.send(message)
-        msg_id = response.headers.get("X-Message-Id", "")
-        _email_log.info(
-            "SendGrid OK booking_id=%s http_status=%s x_message_id=%s",
-            booking_id,
-            response.status_code,
-            msg_id or "(none)",
-        )
-        return True, ""
-    except Exception as e:
-        err_body = getattr(e, "body", None)
-        _email_log.error(
-            "SendGrid FAILED booking_id=%s from=%s to=%s err=%s body=%s",
-            booking_id,
-            _redact_addr(GMAIL_USER),
-            _redact_addr(recipient),
-            e,
-            err_body,
-            exc_info=True,
-        )
-        return False, "Email could not be sent. Check server logs and SendGrid activity."
 
 # One-line startup summary (no secrets)
 _email_log.info(
-    "Email bootstrap: render=%s email_test_mode=%s sender_configured=%s sendgrid_key_set=%s booking_bcc_configured=%s",
+    "Email bootstrap (Gmail SMTP): render=%s email_test_mode=%s gmail_user_set=%s app_password_set=%s booking_to_set=%s",
     _is_render,
     EMAIL_TEST_MODE,
     bool(GMAIL_USER),
-    bool(SENDGRID_API_KEY),
-    bool(BOOKING_EMAIL_BCC),
+    bool(GMAIL_APP_PASSWORD),
+    bool(BOOKING_EMAIL_TO),
 )
 
 # ─── MongoDB (Atlas) ───────────────────────────────────────────────────────────
@@ -381,86 +360,90 @@ def mongo_test():
 
 @app.route("/test-email")
 def test_email():
-    """Debug endpoint to test SendGrid HTTP API from Render."""
+    """Debug endpoint: send a test message via Gmail SMTP to BOOKING_EMAIL_TO."""
     import traceback
+
     info = {
+        "transport": "gmail_smtp",
         "gmail_user_configured": bool(GMAIL_USER),
-        "sendgrid_key_set": bool(SENDGRID_API_KEY),
-        "sendgrid_key_len": len(SENDGRID_API_KEY) if SENDGRID_API_KEY else 0,
+        "app_password_configured": bool(GMAIL_APP_PASSWORD),
+        "booking_to_configured": bool(BOOKING_EMAIL_TO),
         "test_mode": EMAIL_TEST_MODE,
     }
-    if not SENDGRID_API_KEY:
-        info["status"] = "SKIPPED"
-        info["error"] = "SENDGRID_API_KEY not set"
-        return jsonify(info), 400
     if not GMAIL_USER or "@" not in GMAIL_USER:
         info["status"] = "SKIPPED"
-        info["error"] = "GMAIL_USER must be set to a verified SendGrid sender email"
+        info["error"] = "GMAIL_USER must be your full Gmail address used for SMTP login"
         return jsonify(info), 400
-    try:
-        message = Mail(
-            from_email=From(GMAIL_USER, "Healthcare Platform Test"),
-            to_emails=GMAIL_USER,
-            subject="Healthcare Platform: SendGrid Debug Test",
-            html_content="<strong>If you see this, SendGrid HTTP API works from Render!</strong>",
-        )
-        sg = SendGridAPIClient(SENDGRID_API_KEY)
-        response = sg.send(message)
+    if not GMAIL_APP_PASSWORD:
+        info["status"] = "SKIPPED"
+        info["error"] = "GMAIL_APP_PASSWORD not set"
+        return jsonify(info), 400
+    if not BOOKING_EMAIL_TO:
+        info["status"] = "SKIPPED"
+        info["error"] = "BOOKING_EMAIL_TO not set"
+        return jsonify(info), 400
+
+    subject = "Healthcare Platform: Gmail SMTP test"
+    if EMAIL_TEST_MODE:
+        subject = "[TEST MODE] " + subject
+    html = "<p><strong>Gmail SMTP test from Render.</strong></p><p>If you received this, SMTP credentials work.</p>"
+    ok, err = send_html_email_smtp(
+        to_addrs=[BOOKING_EMAIL_TO],
+        subject=subject,
+        html_body=html,
+        log_label="test-email",
+    )
+    if ok:
         info["status"] = "SUCCESS"
-        info["http_status"] = response.status_code
-        info["message_id"] = response.headers.get("X-Message-Id")
-        info["message"] = "Email sent via SendGrid! Check inbox for the configured sender address."
-    except Exception as e:
-        info["status"] = "FAILED"
-        info["error"] = str(e)
+        info["message"] = f"Check inbox at configured BOOKING_EMAIL_TO ({_redact_addr(BOOKING_EMAIL_TO)})."
+        return jsonify(info)
+    info["status"] = "FAILED"
+    info["error"] = err
+    try:
         info["traceback"] = traceback.format_exc()
-    return jsonify(info)
+    except Exception:
+        pass
+    return jsonify(info), 500
 
 
 @app.route("/test-email-custom")
 def test_email_custom():
-    """Diagnostic endpoint to test SendGrid delivery to any email address."""
+    """Diagnostic: send Gmail SMTP test to the address in ?to= (must be valid email)."""
     to_email = request.args.get("to", "").strip()
-    if not to_email:
+    if not to_email or "@" not in to_email:
         return jsonify({"error": "Query param 'to' is required (e.g. /test-email-custom?to=your@email.com)"}), 400
 
     import traceback
     info = {
+        "transport": "gmail_smtp",
         "to_email": to_email,
         "from_configured": bool(GMAIL_USER),
-        "sendgrid_key_set": bool(SENDGRID_API_KEY),
+        "app_password_configured": bool(GMAIL_APP_PASSWORD),
     }
-    if not SENDGRID_API_KEY:
-        info["status"] = "SKIPPED"
-        info["error"] = "SENDGRID_API_KEY not set"
-        return jsonify(info), 400
     if not GMAIL_USER or "@" not in GMAIL_USER:
         info["status"] = "SKIPPED"
-        info["error"] = "GMAIL_USER must be set to a verified SendGrid sender email"
+        info["error"] = "GMAIL_USER not configured"
         return jsonify(info), 400
-    try:
-        from_name = "ClinixCompare Diagnostic"
-        message = Mail(
-            from_email=From(GMAIL_USER, from_name),
-            to_emails=to_email,
-            subject=f"Diagnostic Test — {to_email}",
-            html_content=f"<strong>SendGrid Diagnostic Test</strong><p>Sent to: {to_email}</p>"
-        )
-        message.reply_to = ReplyTo(GMAIL_USER, from_name)
+    if not GMAIL_APP_PASSWORD:
+        info["status"] = "SKIPPED"
+        info["error"] = "GMAIL_APP_PASSWORD not set"
+        return jsonify(info), 400
 
-        sg = SendGridAPIClient(SENDGRID_API_KEY)
-        response = sg.send(message)
+    subject = f"Healthcare Platform SMTP diagnostic — {_redact_addr(to_email)}"
+    html = f"<p><strong>SMTP diagnostic</strong></p><p>Requested recipient: {to_email}</p>"
+    ok, err = send_html_email_smtp(
+        to_addrs=[to_email],
+        subject=subject,
+        html_body=html,
+        log_label="test-email-custom",
+    )
+    if ok:
         info["status"] = "SUCCESS"
-        info["http_status"] = response.status_code
-        info["message_id"] = response.headers.get("X-Message-Id")
-    except Exception as e:
-        info["status"] = "FAILED"
-        info["error"] = str(e)
-        if hasattr(e, 'body'):
-            info["error_body"] = str(e.body)
-        info["traceback"] = traceback.format_exc()
-
-    return jsonify(info)
+        return jsonify(info)
+    info["status"] = "FAILED"
+    info["error"] = err
+    info["traceback"] = traceback.format_exc()
+    return jsonify(info), 500
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  AUTH ROUTES  (MongoDB-first, bcrypt passwords)
