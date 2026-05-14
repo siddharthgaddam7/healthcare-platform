@@ -24,3 +24,7 @@ services:
         sync: false
       - key: GMAIL_USER
         sync: false
+      - key: EMAIL_TEST_MODE
+        sync: false
+      - key: BOOKING_EMAIL_BCC
+        sync: false

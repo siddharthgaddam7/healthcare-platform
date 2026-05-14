@@ -41,7 +41,7 @@ import json
 import os
 import string
 import random
-import threading
+import logging
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -52,20 +52,84 @@ from rapidfuzz import fuzz
 # ─── bcrypt for password hashing (Task 10) ───────────────────────────────────
 import bcrypt
 from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, From, ReplyTo
+from sendgrid.helpers.mail import Mail, From, ReplyTo, Bcc
 
 # ─── Email config ────────────────────────────────────────────────────────────
-GMAIL_USER         = os.environ.get("GMAIL_USER", "").strip()
-SENDGRID_API_KEY   = os.environ.get("SENDGRID_API_KEY", "").strip()
-EMAIL_TEST_MODE    = os.environ.get("EMAIL_TEST_MODE", "true").strip().lower() == "true"
+GMAIL_USER       = os.environ.get("GMAIL_USER", "").strip()
+SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "").strip()
+# On Render, default to production (mail goes to lab + optional BCC). Locally, default test mode.
+_is_render = os.environ.get("RENDER", "").strip().lower() in ("true", "1", "yes")
+_raw_test = os.environ.get("EMAIL_TEST_MODE", "").strip()
+if _raw_test:
+    EMAIL_TEST_MODE = _raw_test.lower() in ("true", "1", "yes")
+else:
+    EMAIL_TEST_MODE = not _is_render
 
-def send_booking_email(to_email, test_name, lab_name, patient_name, patient_email, patient_phone, booking_id):
-    """Sends a booking request email using SendGrid's HTTP API."""
+BOOKING_EMAIL_BCC = os.environ.get("BOOKING_EMAIL_BCC", "").strip()
+
+_email_log = logging.getLogger("healthcare.email")
+if not _email_log.handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("[%(name)s] %(levelname)s: %(message)s"))
+    _email_log.addHandler(_h)
+_email_log.setLevel(logging.INFO)
+
+
+def _redact_addr(addr: str) -> str:
+    if not addr or "@" not in addr:
+        return "(empty)"
+    local, _, domain = addr.partition("@")
+    if len(local) <= 2:
+        return f"***@{domain}"
+    return f"{local[:2]}***@{domain}"
+
+
+def send_booking_email(
+    to_email: str,
+    test_name: str,
+    lab_name: str,
+    patient_name: str,
+    patient_email: str,
+    patient_phone: str,
+    booking_id: str,
+):
+    """
+    Send booking notification via SendGrid.
+    Returns (success: bool, error_message_for_client: str).
+    """
+    to_email = (to_email or "").strip()
+    lab_intended = to_email
+
     if not SENDGRID_API_KEY:
-        print("[WARN] SENDGRID_API_KEY not set. Email cannot be sent.")
-        return False
+        _email_log.error("SENDGRID_API_KEY is not set; cannot send booking email booking_id=%s", booking_id)
+        return False, "Email service is not configured (missing API key)."
 
-    recipient = GMAIL_USER if EMAIL_TEST_MODE else to_email
+    if not GMAIL_USER or "@" not in GMAIL_USER:
+        _email_log.error(
+            "GMAIL_USER is missing or invalid (must be a SendGrid verified sender email) booking_id=%s",
+            booking_id,
+        )
+        return False, "Email sender is not configured (GMAIL_USER)."
+
+    recipient = (GMAIL_USER if EMAIL_TEST_MODE else to_email).strip()
+    if not recipient:
+        _email_log.error(
+            "No recipient resolved (test_mode=%s lab_to=%s) booking_id=%s",
+            EMAIL_TEST_MODE,
+            _redact_addr(lab_intended),
+            booking_id,
+        )
+        return False, "No recipient address for this booking email."
+
+    if not EMAIL_TEST_MODE and not to_email:
+        _email_log.warning(
+            "Lab has no email in DB for lab=%s test=%s booking_id=%s — set BOOKING_EMAIL_BCC or fix lab data, or use EMAIL_TEST_MODE=true for testing.",
+            lab_name,
+            test_name,
+            booking_id,
+        )
+        return False, "This lab has no email on file; the message was not sent."
+
     subject = f"New Booking Request — {test_name} at {lab_name}"
     if EMAIL_TEST_MODE:
         subject = f"[TEST MODE] {subject}"
@@ -85,29 +149,68 @@ def send_booking_email(to_email, test_name, lab_name, patient_name, patient_emai
     <p>Please review this request and contact the patient to confirm the appointment.</p>
     """
     if EMAIL_TEST_MODE:
-        html_body = f"<p><strong>[TEST MODE — Original recipient: {to_email}]</strong></p>" + html_body
+        html_body = (
+            f"<p><strong>[TEST MODE — intended lab recipient: {_redact_addr(lab_intended)}]</strong></p>" + html_body
+        )
 
     from_name = "ClinixCompare Portal"
     message = Mail(
         from_email=From(GMAIL_USER, from_name),
         to_emails=recipient,
         subject=subject,
-        html_content=html_body
+        html_content=html_body,
     )
     message.reply_to = ReplyTo(GMAIL_USER, from_name)
+
+    bcc_addrs = [x.strip() for x in BOOKING_EMAIL_BCC.split(",") if x.strip()]
+    for b in bcc_addrs:
+        try:
+            message.add_bcc(Bcc(b))
+        except Exception as ex:
+            _email_log.warning("Could not add BCC %s: %s", _redact_addr(b), ex)
+
+    _email_log.info(
+        "SendGrid booking email attempt booking_id=%s test_mode=%s to=%s bcc_count=%s subject=%s",
+        booking_id,
+        EMAIL_TEST_MODE,
+        _redact_addr(recipient),
+        len(bcc_addrs),
+        subject[:80],
+    )
 
     try:
         sg = SendGridAPIClient(SENDGRID_API_KEY)
         response = sg.send(message)
-        msg_id = response.headers.get("X-Message-Id")
-        print(f"[OK] Email sent via SendGrid to {recipient}. Status: {response.status_code}, ID: {msg_id}")
-        return True
+        msg_id = response.headers.get("X-Message-Id", "")
+        _email_log.info(
+            "SendGrid OK booking_id=%s http_status=%s x_message_id=%s",
+            booking_id,
+            response.status_code,
+            msg_id or "(none)",
+        )
+        return True, ""
     except Exception as e:
-        print(f"[ERROR] SendGrid failed. From: {GMAIL_USER}, To: {recipient}")
-        print(f"[ERROR] Error: {e}")
-        if hasattr(e, 'body'):
-            print(f"[ERROR] Response Body: {e.body}")
-        return False
+        err_body = getattr(e, "body", None)
+        _email_log.error(
+            "SendGrid FAILED booking_id=%s from=%s to=%s err=%s body=%s",
+            booking_id,
+            _redact_addr(GMAIL_USER),
+            _redact_addr(recipient),
+            e,
+            err_body,
+            exc_info=True,
+        )
+        return False, "Email could not be sent. Check server logs and SendGrid activity."
+
+# One-line startup summary (no secrets)
+_email_log.info(
+    "Email bootstrap: render=%s email_test_mode=%s sender_configured=%s sendgrid_key_set=%s booking_bcc_configured=%s",
+    _is_render,
+    EMAIL_TEST_MODE,
+    bool(GMAIL_USER),
+    bool(SENDGRID_API_KEY),
+    bool(BOOKING_EMAIL_BCC),
+)
 
 # ─── MongoDB (Atlas) ───────────────────────────────────────────────────────────
 # Use the same SRV connection string as before: Atlas → Database → Connect → Drivers.
@@ -281,24 +384,32 @@ def test_email():
     """Debug endpoint to test SendGrid HTTP API from Render."""
     import traceback
     info = {
-        "gmail_user": GMAIL_USER,
+        "gmail_user_configured": bool(GMAIL_USER),
         "sendgrid_key_set": bool(SENDGRID_API_KEY),
         "sendgrid_key_len": len(SENDGRID_API_KEY) if SENDGRID_API_KEY else 0,
         "test_mode": EMAIL_TEST_MODE,
     }
+    if not SENDGRID_API_KEY:
+        info["status"] = "SKIPPED"
+        info["error"] = "SENDGRID_API_KEY not set"
+        return jsonify(info), 400
+    if not GMAIL_USER or "@" not in GMAIL_USER:
+        info["status"] = "SKIPPED"
+        info["error"] = "GMAIL_USER must be set to a verified SendGrid sender email"
+        return jsonify(info), 400
     try:
         message = Mail(
-            from_email=GMAIL_USER,
+            from_email=From(GMAIL_USER, "Healthcare Platform Test"),
             to_emails=GMAIL_USER,
             subject="Healthcare Platform: SendGrid Debug Test",
-            html_content="<strong>If you see this, SendGrid HTTP API works from Render!</strong>"
+            html_content="<strong>If you see this, SendGrid HTTP API works from Render!</strong>",
         )
         sg = SendGridAPIClient(SENDGRID_API_KEY)
         response = sg.send(message)
         info["status"] = "SUCCESS"
         info["http_status"] = response.status_code
         info["message_id"] = response.headers.get("X-Message-Id")
-        info["message"] = "Email sent via SendGrid! Check your inbox."
+        info["message"] = "Email sent via SendGrid! Check inbox for the configured sender address."
     except Exception as e:
         info["status"] = "FAILED"
         info["error"] = str(e)
@@ -316,9 +427,17 @@ def test_email_custom():
     import traceback
     info = {
         "to_email": to_email,
-        "from_email": GMAIL_USER,
+        "from_configured": bool(GMAIL_USER),
         "sendgrid_key_set": bool(SENDGRID_API_KEY),
     }
+    if not SENDGRID_API_KEY:
+        info["status"] = "SKIPPED"
+        info["error"] = "SENDGRID_API_KEY not set"
+        return jsonify(info), 400
+    if not GMAIL_USER or "@" not in GMAIL_USER:
+        info["status"] = "SKIPPED"
+        info["error"] = "GMAIL_USER must be set to a verified SendGrid sender email"
+        return jsonify(info), 400
     try:
         from_name = "ClinixCompare Diagnostic"
         message = Mail(
@@ -911,23 +1030,24 @@ def book_test():
         response["lab_phone"] = lab.get("phone", "")
         response["lab_address"] = lab.get("address", "")
 
-    # For email request mode, send email in background thread (async)
+    # For email request mode, send synchronously so we can report real success/failure
     if mode == "email_request":
         lab_email = lab.get("email", "") if lab else ""
         user = mongo_db.users.find_one({"_id": __import__('bson').ObjectId(session["user_id"])})
         patient_email = user.get("email", "") if user else ""
         patient_phone = user.get("phone", "") if user else ""
-        # Send email in background so response is instant
-        threading.Thread(target=send_booking_email, kwargs={
-            "to_email":      lab_email,
-            "test_name":     test_name,
-            "lab_name":      lab_name,
-            "patient_name":  session.get("username", "Patient"),
-            "patient_email": patient_email,
-            "patient_phone": patient_phone,
-            "booking_id":    booking_id,
-        }, daemon=True).start()
-        response["email_sent"] = True
+        ok, err_msg = send_booking_email(
+            to_email=lab_email,
+            test_name=test_name,
+            lab_name=lab_name,
+            patient_name=session.get("username", "Patient"),
+            patient_email=patient_email,
+            patient_phone=patient_phone,
+            booking_id=booking_id,
+        )
+        response["email_sent"] = ok
+        if not ok:
+            response["email_error"] = err_msg
 
     return jsonify(response)
 
