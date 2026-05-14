@@ -87,11 +87,19 @@ def _redact_addr(addr: str) -> str:
     return f"{local[:2]}***@{domain}"
 
 
+_SMTP_TIMEOUT = 8  # aggressive timeout — Render kills workers at ~30s
+
+
 def send_html_email_smtp(to_addrs: List[str], subject: str, html_body: str, log_label: str) -> Tuple[bool, str]:
     """
     Send HTML mail via Gmail SMTP using STARTTLS on port 587.
     Uses EHLO → STARTTLS → EHLO → LOGIN flow for compatibility with
     cloud hosts (e.g. Render) where SMTP_SSL on port 465 fails.
+
+    Catches BaseException (including SystemExit / KeyboardInterrupt raised
+    by Gunicorn when its worker timeout fires) so the worker process is
+    never terminated by an SMTP failure.
+
     Returns (success, client_safe_error_message).
     """
     to_addrs = [a.strip() for a in to_addrs if a and "@" in a.strip()]
@@ -114,14 +122,22 @@ def send_html_email_smtp(to_addrs: List[str], subject: str, html_body: str, log_
     msg.attach(MIMEText(html_body, "html", "utf-8"))
 
     _email_log.info(
-        "%s: SMTP connect started — smtp.gmail.com:587 (STARTTLS) user=%s recipients=%s",
+        "%s: SMTP connect started — smtp.gmail.com:587 (STARTTLS) timeout=%ss user=%s recipients=%s",
         log_label,
+        _SMTP_TIMEOUT,
         _redact_addr(GMAIL_USER),
         [_redact_addr(a) for a in to_addrs],
     )
 
+    # Save and override the global socket timeout so even low-level
+    # socket.create_connection inside smtplib respects our deadline.
+    prev_timeout = socket.getdefaulttimeout()
     try:
-        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=45)
+        socket.setdefaulttimeout(_SMTP_TIMEOUT)
+
+        _email_log.info("%s: creating SMTP connection object", log_label)
+        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=_SMTP_TIMEOUT)
+        _email_log.info("%s: SMTP connection object created", log_label)
         try:
             server.ehlo()
             _email_log.info("%s: STARTTLS upgrade started", log_label)
@@ -129,15 +145,17 @@ def send_html_email_smtp(to_addrs: List[str], subject: str, html_body: str, log_
             _email_log.info("%s: STARTTLS upgrade success", log_label)
             server.ehlo()
 
+            _email_log.info("%s: SMTP login started", log_label)
             server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
             _email_log.info("%s: SMTP login success", log_label)
 
+            _email_log.info("%s: SMTP sendmail started", log_label)
             server.sendmail(GMAIL_USER, to_addrs, msg.as_string())
             _email_log.info("%s: SMTP send finished OK", log_label)
         finally:
             try:
                 server.quit()
-            except Exception:
+            except BaseException:
                 pass
         return True, ""
 
@@ -147,7 +165,7 @@ def send_html_email_smtp(to_addrs: List[str], subject: str, html_body: str, log_
     except smtplib.SMTPConnectError as e:
         _email_log.error("%s: SMTP connect error: %s", log_label, e, exc_info=True)
         return False, "Could not connect to Gmail SMTP server. Check server logs."
-    except socket.timeout as e:
+    except (socket.timeout, TimeoutError) as e:
         _email_log.error("%s: SMTP socket timeout: %s", log_label, e, exc_info=True)
         return False, "Email could not be sent (connection timed out). Check server logs."
     except OSError as e:
@@ -156,9 +174,16 @@ def send_html_email_smtp(to_addrs: List[str], subject: str, html_body: str, log_
     except smtplib.SMTPException as e:
         _email_log.error("%s: SMTP error: %s", log_label, e, exc_info=True)
         return False, "Email could not be sent (SMTP error). Check server logs."
-    except Exception as e:
-        _email_log.error("%s: unexpected error sending email: %s", log_label, e, exc_info=True)
+    except (SystemExit, KeyboardInterrupt) as e:
+        # Gunicorn sends SystemExit when worker timeout fires.
+        # Swallow it here so the worker survives and returns JSON.
+        _email_log.error("%s: SMTP aborted by system signal (%s): %s", log_label, type(e).__name__, e)
+        return False, "Email could not be sent (worker timeout). The server is healthy."
+    except BaseException as e:
+        _email_log.error("%s: unexpected BaseException during SMTP: %s", log_label, e, exc_info=True)
         return False, "Email could not be sent. Check server logs."
+    finally:
+        socket.setdefaulttimeout(prev_timeout)
 
 
 def send_booking_email(
@@ -383,90 +408,112 @@ def mongo_test():
 
 @app.route("/test-email")
 def test_email():
-    """Debug endpoint: send a test message via Gmail SMTP to BOOKING_EMAIL_TO."""
-    import traceback
-
-    info = {
-        "transport": "gmail_smtp",
-        "gmail_user_configured": bool(GMAIL_USER),
-        "app_password_configured": bool(GMAIL_APP_PASSWORD),
-        "booking_to_configured": bool(BOOKING_EMAIL_TO),
-        "test_mode": EMAIL_TEST_MODE,
-    }
-    if not GMAIL_USER or "@" not in GMAIL_USER:
-        info["status"] = "SKIPPED"
-        info["error"] = "GMAIL_USER must be your full Gmail address used for SMTP login"
-        return jsonify(info), 400
-    if not GMAIL_APP_PASSWORD:
-        info["status"] = "SKIPPED"
-        info["error"] = "GMAIL_APP_PASSWORD not set"
-        return jsonify(info), 400
-    if not BOOKING_EMAIL_TO:
-        info["status"] = "SKIPPED"
-        info["error"] = "BOOKING_EMAIL_TO not set"
-        return jsonify(info), 400
-
-    subject = "Healthcare Platform: Gmail SMTP test"
-    if EMAIL_TEST_MODE:
-        subject = "[TEST MODE] " + subject
-    html = "<p><strong>Gmail SMTP test via STARTTLS (port 587) from Render.</strong></p><p>If you received this, SMTP credentials work.</p>"
-    ok, err = send_html_email_smtp(
-        to_addrs=[BOOKING_EMAIL_TO],
-        subject=subject,
-        html_body=html,
-        log_label="test-email",
-    )
-    if ok:
-        info["status"] = "SUCCESS"
-        info["message"] = f"Check inbox at configured BOOKING_EMAIL_TO ({_redact_addr(BOOKING_EMAIL_TO)})."
-        return jsonify(info)
-    info["status"] = "FAILED"
-    info["error"] = err
+    """Debug endpoint: send a test message via Gmail SMTP to BOOKING_EMAIL_TO.
+    Wrapped with BaseException guard — always returns JSON, never crashes worker."""
     try:
-        info["traceback"] = traceback.format_exc()
-    except Exception:
-        pass
-    return jsonify(info), 500
+        import traceback
+
+        info = {
+            "transport": "gmail_smtp_starttls_587",
+            "smtp_timeout": _SMTP_TIMEOUT,
+            "gmail_user_configured": bool(GMAIL_USER),
+            "app_password_configured": bool(GMAIL_APP_PASSWORD),
+            "booking_to_configured": bool(BOOKING_EMAIL_TO),
+            "test_mode": EMAIL_TEST_MODE,
+        }
+        if not GMAIL_USER or "@" not in GMAIL_USER:
+            info["status"] = "SKIPPED"
+            info["error"] = "GMAIL_USER must be your full Gmail address used for SMTP login"
+            return jsonify(info), 400
+        if not GMAIL_APP_PASSWORD:
+            info["status"] = "SKIPPED"
+            info["error"] = "GMAIL_APP_PASSWORD not set"
+            return jsonify(info), 400
+        if not BOOKING_EMAIL_TO:
+            info["status"] = "SKIPPED"
+            info["error"] = "BOOKING_EMAIL_TO not set"
+            return jsonify(info), 400
+
+        subject = "Healthcare Platform: Gmail SMTP test"
+        if EMAIL_TEST_MODE:
+            subject = "[TEST MODE] " + subject
+        html = "<p><strong>Gmail SMTP test via STARTTLS (port 587) from Render.</strong></p><p>If you received this, SMTP credentials work.</p>"
+        ok, err = send_html_email_smtp(
+            to_addrs=[BOOKING_EMAIL_TO],
+            subject=subject,
+            html_body=html,
+            log_label="test-email",
+        )
+        if ok:
+            info["status"] = "SUCCESS"
+            info["message"] = f"Check inbox at configured BOOKING_EMAIL_TO ({_redact_addr(BOOKING_EMAIL_TO)})."
+            return jsonify(info)
+        info["status"] = "FAILED"
+        info["error"] = err
+        try:
+            info["traceback"] = traceback.format_exc()
+        except Exception:
+            pass
+        return jsonify(info), 500
+
+    except BaseException as exc:
+        _email_log.error("test-email: unhandled %s: %s", type(exc).__name__, exc, exc_info=True)
+        return jsonify({
+            "status": "FAILED",
+            "error": f"Email test aborted ({type(exc).__name__}). Worker survived.",
+            "transport": "gmail_smtp_starttls_587",
+        }), 500
 
 
 @app.route("/test-email-custom")
 def test_email_custom():
-    """Diagnostic: send Gmail SMTP test to the address in ?to= (must be valid email)."""
-    to_email = request.args.get("to", "").strip()
-    if not to_email or "@" not in to_email:
-        return jsonify({"error": "Query param 'to' is required (e.g. /test-email-custom?to=your@email.com)"}), 400
+    """Diagnostic: send Gmail SMTP test to the address in ?to= (must be valid email).
+    Wrapped with BaseException guard — always returns JSON, never crashes worker."""
+    try:
+        to_email = request.args.get("to", "").strip()
+        if not to_email or "@" not in to_email:
+            return jsonify({"error": "Query param 'to' is required (e.g. /test-email-custom?to=your@email.com)"}), 400
 
-    import traceback
-    info = {
-        "transport": "gmail_smtp",
-        "to_email": to_email,
-        "from_configured": bool(GMAIL_USER),
-        "app_password_configured": bool(GMAIL_APP_PASSWORD),
-    }
-    if not GMAIL_USER or "@" not in GMAIL_USER:
-        info["status"] = "SKIPPED"
-        info["error"] = "GMAIL_USER not configured"
-        return jsonify(info), 400
-    if not GMAIL_APP_PASSWORD:
-        info["status"] = "SKIPPED"
-        info["error"] = "GMAIL_APP_PASSWORD not set"
-        return jsonify(info), 400
+        import traceback
+        info = {
+            "transport": "gmail_smtp_starttls_587",
+            "smtp_timeout": _SMTP_TIMEOUT,
+            "to_email": to_email,
+            "from_configured": bool(GMAIL_USER),
+            "app_password_configured": bool(GMAIL_APP_PASSWORD),
+        }
+        if not GMAIL_USER or "@" not in GMAIL_USER:
+            info["status"] = "SKIPPED"
+            info["error"] = "GMAIL_USER not configured"
+            return jsonify(info), 400
+        if not GMAIL_APP_PASSWORD:
+            info["status"] = "SKIPPED"
+            info["error"] = "GMAIL_APP_PASSWORD not set"
+            return jsonify(info), 400
 
-    subject = f"Healthcare Platform SMTP diagnostic — {_redact_addr(to_email)}"
-    html = f"<p><strong>SMTP diagnostic</strong></p><p>Requested recipient: {to_email}</p>"
-    ok, err = send_html_email_smtp(
-        to_addrs=[to_email],
-        subject=subject,
-        html_body=html,
-        log_label="test-email-custom",
-    )
-    if ok:
-        info["status"] = "SUCCESS"
-        return jsonify(info)
-    info["status"] = "FAILED"
-    info["error"] = err
-    info["traceback"] = traceback.format_exc()
-    return jsonify(info), 500
+        subject = f"Healthcare Platform SMTP diagnostic — {_redact_addr(to_email)}"
+        html = f"<p><strong>SMTP diagnostic</strong></p><p>Requested recipient: {to_email}</p>"
+        ok, err = send_html_email_smtp(
+            to_addrs=[to_email],
+            subject=subject,
+            html_body=html,
+            log_label="test-email-custom",
+        )
+        if ok:
+            info["status"] = "SUCCESS"
+            return jsonify(info)
+        info["status"] = "FAILED"
+        info["error"] = err
+        info["traceback"] = traceback.format_exc()
+        return jsonify(info), 500
+
+    except BaseException as exc:
+        _email_log.error("test-email-custom: unhandled %s: %s", type(exc).__name__, exc, exc_info=True)
+        return jsonify({
+            "status": "FAILED",
+            "error": f"Email test aborted ({type(exc).__name__}). Worker survived.",
+            "transport": "gmail_smtp_starttls_587",
+        }), 500
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  AUTH ROUTES  (MongoDB-first, bcrypt passwords)
