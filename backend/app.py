@@ -53,6 +53,7 @@ from rapidfuzz import fuzz
 # ─── bcrypt for password hashing (Task 10) ───────────────────────────────────
 import bcrypt
 import smtplib
+import socket
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -88,7 +89,9 @@ def _redact_addr(addr: str) -> str:
 
 def send_html_email_smtp(to_addrs: List[str], subject: str, html_body: str, log_label: str) -> Tuple[bool, str]:
     """
-    Send HTML mail via Gmail SMTP (TLS on port 465).
+    Send HTML mail via Gmail SMTP using STARTTLS on port 587.
+    Uses EHLO → STARTTLS → EHLO → LOGIN flow for compatibility with
+    cloud hosts (e.g. Render) where SMTP_SSL on port 465 fails.
     Returns (success, client_safe_error_message).
     """
     to_addrs = [a.strip() for a in to_addrs if a and "@" in a.strip()]
@@ -111,30 +114,50 @@ def send_html_email_smtp(to_addrs: List[str], subject: str, html_body: str, log_
     msg.attach(MIMEText(html_body, "html", "utf-8"))
 
     _email_log.info(
-        "%s: SMTP smtp.gmail.com:465 login user=%s recipients=%s",
+        "%s: SMTP connect started — smtp.gmail.com:587 (STARTTLS) user=%s recipients=%s",
         log_label,
         _redact_addr(GMAIL_USER),
         [_redact_addr(a) for a in to_addrs],
     )
 
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=45) as server:
+        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=45)
+        try:
+            server.ehlo()
+            _email_log.info("%s: STARTTLS upgrade started", log_label)
+            server.starttls()
+            _email_log.info("%s: STARTTLS upgrade success", log_label)
+            server.ehlo()
+
             server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-            _email_log.info("%s: SMTP authentication successful", log_label)
+            _email_log.info("%s: SMTP login success", log_label)
+
             server.sendmail(GMAIL_USER, to_addrs, msg.as_string())
-        _email_log.info("%s: SMTP send finished OK", log_label)
+            _email_log.info("%s: SMTP send finished OK", log_label)
+        finally:
+            try:
+                server.quit()
+            except Exception:
+                pass
         return True, ""
+
     except smtplib.SMTPAuthenticationError as e:
         _email_log.error("%s: SMTP authentication failed: %s", log_label, e, exc_info=True)
         return False, "Email login failed (check GMAIL_USER and App Password)."
+    except smtplib.SMTPConnectError as e:
+        _email_log.error("%s: SMTP connect error: %s", log_label, e, exc_info=True)
+        return False, "Could not connect to Gmail SMTP server. Check server logs."
+    except socket.timeout as e:
+        _email_log.error("%s: SMTP socket timeout: %s", log_label, e, exc_info=True)
+        return False, "Email could not be sent (connection timed out). Check server logs."
+    except OSError as e:
+        _email_log.error("%s: SMTP network/OS error: %s", log_label, e, exc_info=True)
+        return False, "Email could not be sent (network error). Check server logs."
     except smtplib.SMTPException as e:
         _email_log.error("%s: SMTP error: %s", log_label, e, exc_info=True)
         return False, "Email could not be sent (SMTP error). Check server logs."
-    except OSError as e:
-        _email_log.error("%s: SMTP network/timeout error: %s", log_label, e, exc_info=True)
-        return False, "Email could not be sent (network). Check server logs."
     except Exception as e:
-        _email_log.error("%s: unexpected error: %s", log_label, e, exc_info=True)
+        _email_log.error("%s: unexpected error sending email: %s", log_label, e, exc_info=True)
         return False, "Email could not be sent. Check server logs."
 
 
@@ -386,7 +409,7 @@ def test_email():
     subject = "Healthcare Platform: Gmail SMTP test"
     if EMAIL_TEST_MODE:
         subject = "[TEST MODE] " + subject
-    html = "<p><strong>Gmail SMTP test from Render.</strong></p><p>If you received this, SMTP credentials work.</p>"
+    html = "<p><strong>Gmail SMTP test via STARTTLS (port 587) from Render.</strong></p><p>If you received this, SMTP credentials work.</p>"
     ok, err = send_html_email_smtp(
         to_addrs=[BOOKING_EMAIL_TO],
         subject=subject,
