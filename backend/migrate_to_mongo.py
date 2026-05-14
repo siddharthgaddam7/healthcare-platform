@@ -29,11 +29,13 @@ if not MONGO_URI:
     print("  e.g.  set MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/")
     sys.exit(1)
 
+DB_NAME = (os.environ.get("MONGO_DB_NAME") or "healthcare_platform").strip()
+
 # ─── Connect ─────────────────────────────────────────────────────────────────
 client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
 client.admin.command("ping")
-db = client["healthcare_platform"]
-print("[OK] Connected to MongoDB Atlas")
+db = client[DB_NAME]
+print("[OK] Connected to MongoDB Atlas →", DB_NAME)
 
 # ─── Alias map (Task 7 — search aliases) ─────────────────────────────────────
 ALIASES = {

@@ -1,7 +1,5 @@
-// Backend API base URL (auto-detect local vs EC2)
-const BASE = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-    ? "http://localhost:10000"
-    : "http://15.206.125.164";
+// Backend API base — api-base.js must load before this file (sets getApiBase / __CC_API_BASE__).
+const BASE = typeof window.getApiBase === "function" ? window.getApiBase() : "http://127.0.0.1:10000";
 
 /* ─── HTML escape ─────────────────────────────────────────────────────── */
 function esc(s) {
@@ -45,7 +43,7 @@ window.onload = async function () {
 /* ─── Load dropdown ───────────────────────────────────────────────────── */
 async function loadTests() {
     try {
-        const r = await fetch(BASE + "/tests");
+        const r = await fetch(BASE + "/tests", { credentials: "include" });
         const d = await r.json();
         const sel = document.getElementById("testDropdown");
         (d.tests || []).forEach(t => {
@@ -81,7 +79,7 @@ function setupAutosuggest() {
 async function fetchSuggestions(q) {
     const box = document.getElementById("suggestBox");
     try {
-        const r = await fetch(BASE + "/suggest?q=" + encodeURIComponent(q));
+        const r = await fetch(BASE + "/suggest?q=" + encodeURIComponent(q), { credentials: "include" });
         const d = await r.json();
         const items = d.suggestions || [];
         if (!items.length) { box.style.display = "none"; return; }

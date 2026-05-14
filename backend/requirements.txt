@@ -1,6 +1,7 @@
 # requirements.txt for backend
 flask
 flask-cors
+gunicorn
 pandas
 rapidfuzz
 openpyxl

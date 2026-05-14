@@ -109,16 +109,21 @@ def send_booking_email(to_email, test_name, lab_name, patient_name, patient_emai
             print(f"[ERROR] Response Body: {e.body}")
         return False
 
-# ─── MongoDB ─────────────────────────────────────────────────────────────────
+# ─── MongoDB (Atlas) ───────────────────────────────────────────────────────────
+# Use the same SRV connection string as before: Atlas → Database → Connect → Drivers.
+# Resuming a paused cluster (e.g. Cluster0) does not change the host in that string unless
+# Atlas shows a new one. Database name matches the original project: healthcare_platform.
 mongo_db = None
 try:
     from pymongo import MongoClient
     MONGO_URI = (os.environ.get("MONGO_URI") or os.environ.get("MONGO_URL") or "").strip()
+    _db_name = (os.environ.get("MONGO_DB_NAME") or "healthcare_platform").strip()
     if MONGO_URI:
-        _client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+        # Longer timeout helps cold Atlas / TLS handshakes from Render workers.
+        _client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=15000)
         _client.admin.command("ping")
-        mongo_db = _client["healthcare_platform"]
-        print("[OK] MongoDB Atlas connected")
+        mongo_db = _client[_db_name]
+        print("[OK] MongoDB Atlas connected →", _db_name)
     else:
         print("[WARN] No MONGO_URI set — MongoDB disabled")
 except Exception as e:
@@ -179,18 +184,50 @@ else:
 
 # ─── Flask app ───────────────────────────────────────────────────────────────
 app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path="")
-app.secret_key = "hyd_health_secret_2026"
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["SESSION_COOKIE_SECURE"]   = False
+app.secret_key = os.environ.get("SECRET_KEY", "hyd_health_secret_2026")
 
-CORS(app, supports_credentials=True, resources={r"/*": {"origins": [
-    "https://healthcare-platform-gamma.vercel.app",
-    "https://healthcare-platform.vercel.app",
-    "http://15.206.125.164",
+# Cross-site session cookies: Vercel (HTTPS) calling Render (HTTPS) needs SameSite=None; Secure.
+if os.environ.get("RENDER"):
+    app.config["SESSION_COOKIE_SAMESITE"] = "None"
+    app.config["SESSION_COOKIE_SECURE"] = True
+else:
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SECURE"] = False
+
+def _normalize_cors_origin(origin: str) -> str:
+    """Browser Origin has no path; strip accidental trailing slashes from env."""
+    o = (origin or "").strip()
+    return o.rstrip("/") if o else ""
+
+
+_default_cors = [
     "http://localhost:3000",
     "http://localhost:5500",
     "http://127.0.0.1:5500",
-]}})
+    "http://127.0.0.1:10000",
+    "http://localhost:10000",
+    # ClinixCompare / Hyderabad Health — production + preview Vercel hostnames
+    "https://healthcare-platform-gamma.vercel.app",
+    "https://healthcare-platform-an0jzakti.vercel.app",
+    "https://healthcare-platform.vercel.app",
+]
+_extra = os.environ.get("FRONTEND_ORIGINS", "").strip()
+_extra_list = [o.strip() for o in _extra.split(",") if o.strip()] if _extra else []
+_cors_origins = list(
+    dict.fromkeys(
+        x
+        for x in (
+            _normalize_cors_origin(o) for o in (_default_cors + _extra_list)
+        )
+        if x
+    )
+)
+
+CORS(
+    app,
+    supports_credentials=True,
+    resources={r"/*": {"origins": _cors_origins}},
+)
 
 
 # ─── Helper: password hashing (Task 10) ─────────────────────────────────────
@@ -223,14 +260,14 @@ def mongo_test():
     if mongo_db is None:
         return jsonify({
             "connected": False,
-            "error": "MONGO_URI not set or connection failed. Check Render environment variables."
+            "error": "MONGO_URI not set or connection failed. Check your host's environment variables (e.g. Render)."
         }), 500
     try:
         collections = mongo_db.list_collection_names()
         stats = {col: mongo_db[col].count_documents({}) for col in collections}
         return jsonify({
             "connected":   True,
-            "database":    "healthcare_platform",
+            "database":    mongo_db.name,
             "collections": collections,
             "doc_counts":  stats,
             "message":     "MongoDB Atlas is connected!"

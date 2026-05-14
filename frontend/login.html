@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="cc-api-base" content="">
     <title>Login - Hyderabad Health</title>
     <style>
         :root {
@@ -301,10 +302,9 @@
         </div>
     </div>
 
+    <script src="api-base.js"></script>
     <script>
-        const BASE = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-            ? "http://localhost:10000"
-            : "http://15.206.125.164";
+        const BASE = typeof window.getApiBase === "function" ? window.getApiBase() : "http://127.0.0.1:10000";
 
         // ─── Tab switching ─────────────────────────────────────────────
         function showTab(tab) {
@@ -417,6 +417,7 @@
                 const r = await fetch(BASE + '/forgot-password', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({ username: u })
                 });
                 const d = await r.json();
@@ -438,6 +439,7 @@
                 const r = await fetch(BASE + '/verify-reset', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({ username: resetUsername, security_answer: answer })
                 });
                 const d = await r.json();
@@ -461,6 +463,7 @@
                 const r = await fetch(BASE + '/reset-password', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({ username: resetUsername, reset_token: resetToken, new_password: p1 })
                 });
                 const d = await r.json();

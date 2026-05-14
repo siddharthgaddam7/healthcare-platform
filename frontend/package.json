@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "description": "Vercel runs `npm run build` to inject CC_API_BASE_URL into api-base.js (ephemeral build only).",
+  "scripts": {
+    "build": "node scripts/inject-cc-api-base.cjs"
+  }
+}

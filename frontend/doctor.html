@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="cc-api-base" content="">
     <title>Doctor Dashboard — Hyderabad Health</title>
     <link rel="stylesheet" href="style.css">
     <style>
@@ -273,10 +274,9 @@
         </div>
     </div>
 
+    <script src="api-base.js"></script>
     <script>
-        const B = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-            ? "http://localhost:10000"
-            : "http://15.206.125.164";
+        const B = typeof window.getApiBase === "function" ? window.getApiBase() : "http://127.0.0.1:10000";
 
         // Auth check
         fetch(B + "/me", { credentials: "include" })
